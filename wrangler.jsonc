@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cameron-trading-desk",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trading-desk",
+      "database_id": "0352643f-54df-474e-a1a3-cb7e069ce398",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

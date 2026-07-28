@@ -1,0 +1,19 @@
+0 verbose cli /usr/local/bin/node /usr/local/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@11.16.0
+2 info using node@v24.18.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/cameronrichardson/Downloads/cloudflare-trading-desk/.npmrc
+5 silly config load:file:/Users/cameronrichardson/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm exec wrangler deploy
+8 verbose argv "exec" "--" "wrangler" "deploy"
+9 verbose logfile logs-max:10 dir:/Users/cameronrichardson/Downloads/cloudflare-trading-desk/.sites-runtime/npm-cache/_logs/2026-07-28T14_42_46_418Z-
+10 verbose logfile /Users/cameronrichardson/Downloads/cloudflare-trading-desk/.sites-runtime/npm-cache/_logs/2026-07-28T14_42_46_418Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 verbose cwd /Users/cameronrichardson/Downloads/cloudflare-trading-desk
+14 verbose os Darwin 25.5.0
+15 verbose node v24.18.0
+16 verbose npm  v11.16.0
+17 verbose exit 0
+18 info ok
