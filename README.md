@@ -28,3 +28,4 @@ npm run lint
 
 For the first Cloudflare deployment, follow
 [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md).
+# cloudflare-trading-desk
