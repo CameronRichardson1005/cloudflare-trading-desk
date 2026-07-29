@@ -64,6 +64,13 @@ type SymbolReliability = {
     | "FALLBACK_INSUFFICIENT_HISTORY";
 };
 
+type ProductionHealth = {
+  runMode: "MANUAL" | "SCHEDULED" | "REPLAY";
+  workflowStatus: "COMPLETED" | "FAILED";
+  marketDay: boolean;
+  dataStatus: "HEALTHY" | "WARNING";
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -73,6 +80,7 @@ type DashboardSession = {
   updatedAt: string;
   symbols: DashboardSymbol[];
   symbolReliability?: SymbolReliability[];
+  productionHealth?: ProductionHealth;
 };
 
 const fallbackSession: DashboardSession = {
@@ -899,6 +907,53 @@ export default function Home() {
               onClick={() => showSymbolView("warnings")}
             />
           </section>
+
+          {session.productionHealth ? (
+            <section
+              className={`production-health ${
+                session.productionHealth.dataStatus.toLowerCase()
+              }`}
+              aria-label="Production run health"
+            >
+              <div className="production-health-title">
+                <span className="health-indicator" />
+                <div>
+                  <small>PRODUCTION HEALTH</small>
+                  <strong>
+                    {session.productionHealth.dataStatus ===
+                    "HEALTHY"
+                      ? "Run completed successfully"
+                      : "Run completed with a data warning"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="production-health-facts">
+                <span>
+                  <small>Run type</small>
+                  <b>{session.productionHealth.runMode}</b>
+                </span>
+                <span>
+                  <small>Workflow</small>
+                  <b>
+                    {session.productionHealth.workflowStatus}
+                  </b>
+                </span>
+                <span>
+                  <small>Session</small>
+                  <b>RECEIVED</b>
+                </span>
+                <span>
+                  <small>Feed</small>
+                  <b>{session.dataFeed}</b>
+                </span>
+                <span>
+                  <small>Updated</small>
+                  <b>{updatedTime}</b>
+                </span>
+              </div>
+            </section>
+          ) : null}
 
           <section className="panel symbol-panel" id="symbols">
             <div className="panel-heading">

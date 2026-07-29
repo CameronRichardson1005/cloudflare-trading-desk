@@ -92,6 +92,13 @@ export type SymbolReliability = {
   status: SymbolReliabilityStatus;
 };
 
+export type ProductionHealth = {
+  runMode: "MANUAL" | "SCHEDULED" | "REPLAY";
+  workflowStatus: "COMPLETED" | "FAILED";
+  marketDay: boolean;
+  dataStatus: "HEALTHY" | "WARNING";
+};
+
 export type TradingSession = {
   id: string;
   tradingDate: string;
@@ -101,6 +108,7 @@ export type TradingSession = {
   updatedAt: string;
   symbols: SessionSymbol[];
   symbolReliability?: SymbolReliability[];
+  productionHealth?: ProductionHealth;
 };
 
 function database(): D1Database {

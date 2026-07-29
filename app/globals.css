@@ -1820,3 +1820,89 @@ a {
     right: 18px;
   }
 }
+
+/* Compact operational status between metrics and orders */
+.production-health {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 70px;
+  padding: 14px 18px;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 14px;
+  background: rgba(8, 22, 45, 0.62);
+}
+
+.production-health.warning {
+  border-color: rgba(255, 139, 101, 0.3);
+}
+
+.production-health-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 235px;
+}
+
+.production-health-title div {
+  display: grid;
+  gap: 3px;
+}
+
+.production-health-title small,
+.production-health-facts small {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+}
+
+.production-health-title strong {
+  color: white;
+  font-size: 0.88rem;
+}
+
+.health-indicator {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.7);
+}
+
+.production-health.warning .health-indicator {
+  background: var(--coral);
+  box-shadow: 0 0 15px rgba(255, 139, 101, 0.7);
+}
+
+.production-health-facts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.production-health-facts span {
+  display: grid;
+  gap: 3px;
+}
+
+.production-health-facts b {
+  color: white;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 900px) {
+  .production-health {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .production-health-facts {
+    justify-content: flex-start;
+    gap: 16px 24px;
+  }
+}

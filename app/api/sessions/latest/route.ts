@@ -140,6 +140,28 @@ function validateSymbol(value: unknown): value is SessionSymbol {
   );
 }
 
+function validateProductionHealth(
+  value: unknown,
+): boolean {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+
+  const health = value as Record<string, unknown>;
+
+  return (
+    ["MANUAL", "SCHEDULED", "REPLAY"].includes(
+      String(health.runMode),
+    ) &&
+    ["COMPLETED", "FAILED"].includes(
+      String(health.workflowStatus),
+    ) &&
+    typeof health.marketDay === "boolean" &&
+    ["HEALTHY", "WARNING"].includes(
+      String(health.dataStatus),
+    )
+  );
+}
+
 function validateSession(value: unknown): value is TradingSession {
   if (!value || typeof value !== "object") return false;
   const session = value as Partial<TradingSession>;
@@ -153,6 +175,9 @@ function validateSession(value: unknown): value is TradingSession {
     Array.isArray(session.symbols) &&
     session.symbols.length > 0 &&
     session.symbols.every(validateSymbol) &&
+    validateProductionHealth(
+      session.productionHealth,
+    ) &&
     (
       session.symbolReliability === undefined ||
       (
