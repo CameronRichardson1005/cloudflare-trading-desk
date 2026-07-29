@@ -51,6 +51,19 @@ type DashboardSymbol = {
   };
 };
 
+type SymbolReliability = {
+  symbol: string;
+  completeness: number;
+  usableDays: number;
+  totalBars: number;
+  expectedBars: number;
+  status:
+    | "SELECTED"
+    | "EXCLUDED_LOW_RELIABILITY"
+    | "NOT_SELECTED_RANKING_LIMIT"
+    | "FALLBACK_INSUFFICIENT_HISTORY";
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -59,6 +72,7 @@ type DashboardSession = {
   status: "COMPLETE" | "INCOMPLETE";
   updatedAt: string;
   symbols: DashboardSymbol[];
+  symbolReliability?: SymbolReliability[];
 };
 
 const fallbackSession: DashboardSession = {
@@ -282,6 +296,21 @@ function Metric({
       </span>
     </button>
   );
+}
+
+function reliabilityStatusLabel(
+  status: SymbolReliability["status"],
+) {
+  switch (status) {
+    case "SELECTED":
+      return "Selected";
+    case "EXCLUDED_LOW_RELIABILITY":
+      return "Excluded — low reliability";
+    case "NOT_SELECTED_RANKING_LIMIT":
+      return "Not selected — ranking limit";
+    case "FALLBACK_INSUFFICIENT_HISTORY":
+      return "Fallback — insufficient history";
+  }
 }
 
 function warningExplanation(stock: DashboardSymbol) {
@@ -851,6 +880,77 @@ export default function Home() {
               onClick={() => showSymbolView("warnings")}
             />
           </section>
+
+          {session.symbolReliability?.length ? (
+            <section
+              className="panel reliability-panel"
+              aria-label="IEX symbol reliability"
+            >
+              <div className="panel-heading">
+                <div>
+                  <span className="panel-kicker">
+                    MARKET DATA QUALITY
+                  </span>
+                  <h2>Opening-bar reliability</h2>
+                </div>
+                <div className="data-source">
+                  <span />
+                  Recent {session.dataFeed} opening sessions
+                </div>
+              </div>
+
+              <div
+                className="reliability-table"
+                role="table"
+                aria-label="Symbol reliability results"
+              >
+                <div
+                  className="reliability-row table-head"
+                  role="row"
+                >
+                  <span role="columnheader">Symbol</span>
+                  <span role="columnheader">Completeness</span>
+                  <span role="columnheader">History</span>
+                  <span role="columnheader">Selection result</span>
+                </div>
+
+                {session.symbolReliability.map((record) => (
+                  <div
+                    className="reliability-row"
+                    key={record.symbol}
+                    role="row"
+                  >
+                    <strong role="cell">{record.symbol}</strong>
+
+                    <span role="cell">
+                      <b>
+                        {(record.completeness * 100).toFixed(1)}%
+                      </b>
+                    </span>
+
+                    <span role="cell">
+                      {record.totalBars}/{record.expectedBars} bars
+                      across {record.usableDays} days
+                    </span>
+
+                    <span
+                      className={`reliability-status ${
+                        record.status === "SELECTED"
+                          ? "selected"
+                          : record.status ===
+                              "EXCLUDED_LOW_RELIABILITY"
+                            ? "excluded"
+                            : "limited"
+                      }`}
+                      role="cell"
+                    >
+                      {reliabilityStatusLabel(record.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="panel symbol-panel" id="symbols">
             <div className="panel-heading">

@@ -80,6 +80,31 @@ function validateOutcome(value: unknown) {
   );
 }
 
+function validateSymbolReliability(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+
+  const reliability = value as Record<string, unknown>;
+
+  return (
+    typeof reliability.symbol === "string" &&
+    validNumber(reliability.completeness) &&
+    reliability.completeness >= 0 &&
+    reliability.completeness <= 1 &&
+    Number.isInteger(reliability.usableDays) &&
+    Number(reliability.usableDays) >= 0 &&
+    Number.isInteger(reliability.totalBars) &&
+    Number(reliability.totalBars) >= 0 &&
+    Number.isInteger(reliability.expectedBars) &&
+    Number(reliability.expectedBars) >= 0 &&
+    [
+      "SELECTED",
+      "EXCLUDED_LOW_RELIABILITY",
+      "NOT_SELECTED_RANKING_LIMIT",
+      "FALLBACK_INSUFFICIENT_HISTORY",
+    ].includes(String(reliability.status))
+  );
+}
+
 function validateSymbol(value: unknown): value is SessionSymbol {
   if (!value || typeof value !== "object") return false;
   const symbol = value as Partial<SessionSymbol>;
@@ -127,7 +152,16 @@ function validateSession(value: unknown): value is TradingSession {
     !Number.isNaN(Date.parse(String(session.updatedAt))) &&
     Array.isArray(session.symbols) &&
     session.symbols.length > 0 &&
-    session.symbols.every(validateSymbol)
+    session.symbols.every(validateSymbol) &&
+    (
+      session.symbolReliability === undefined ||
+      (
+        Array.isArray(session.symbolReliability) &&
+        session.symbolReliability.every(
+          validateSymbolReliability,
+        )
+      )
+    )
   );
 }
 

@@ -77,14 +77,30 @@ export type SessionSymbol = {
   outcome?: TradeOutcome;
 };
 
+export type SymbolReliabilityStatus =
+  | "SELECTED"
+  | "EXCLUDED_LOW_RELIABILITY"
+  | "NOT_SELECTED_RANKING_LIMIT"
+  | "FALLBACK_INSUFFICIENT_HISTORY";
+
+export type SymbolReliability = {
+  symbol: string;
+  completeness: number;
+  usableDays: number;
+  totalBars: number;
+  expectedBars: number;
+  status: SymbolReliabilityStatus;
+};
+
 export type TradingSession = {
   id: string;
   tradingDate: string;
   source: "REPLAY" | "LIVE";
-  dataFeed: "SIP";
+  dataFeed: "IEX" | "SIP";
   status: "COMPLETE" | "INCOMPLETE";
   updatedAt: string;
   symbols: SessionSymbol[];
+  symbolReliability?: SymbolReliability[];
 };
 
 function database(): D1Database {
