@@ -40,3 +40,7 @@ next-env.d.ts
 /.tool-home/
 /outputs/
 /work/
+
+# Generated local runtime files
+.sites-runtime/
+tsconfig.tsbuildinfo
