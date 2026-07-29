@@ -1682,3 +1682,31 @@ a {
     grid-column: 1 / -1;
   }
 }
+
+/* Keep long reliability decisions visible on desktop. */
+.reliability-table {
+  overflow-x: auto;
+}
+
+.reliability-row {
+  min-width: 900px;
+  grid-template-columns:
+    minmax(100px, 0.6fr)
+    minmax(130px, 0.7fr)
+    minmax(260px, 1.4fr)
+    minmax(300px, 1.5fr);
+}
+
+.reliability-status {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+@media (max-width: 800px) {
+  .reliability-row {
+    min-width: 0;
+    grid-template-columns: 1fr 1fr;
+  }
+}
