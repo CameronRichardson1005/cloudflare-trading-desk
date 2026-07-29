@@ -1710,3 +1710,113 @@ a {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Cleaner opening dashboard view */
+.content {
+  gap: 20px;
+}
+
+.status-strip {
+  margin-bottom: 2px;
+}
+
+.symbol-panel {
+  position: relative;
+  border-color: rgba(32, 218, 242, 0.32);
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.symbol-panel .panel-heading {
+  padding-bottom: 18px;
+}
+
+.reliability-disclosure {
+  padding: 0;
+  overflow: hidden;
+  border-color: var(--line-soft);
+  background: rgba(8, 20, 44, 0.72);
+}
+
+.reliability-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 22px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--muted);
+}
+
+.reliability-summary::-webkit-details-marker {
+  display: none;
+}
+
+.reliability-summary::after {
+  content: "View details";
+  flex: 0 0 auto;
+  color: var(--cyan);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reliability-disclosure[open]
+  .reliability-summary::after {
+  content: "Hide details";
+}
+
+.reliability-summary > div {
+  display: grid;
+  gap: 5px;
+}
+
+.reliability-summary strong {
+  color: white;
+  font-size: 1rem;
+}
+
+.reliability-summary > span {
+  margin-left: auto;
+  font-size: 0.82rem;
+}
+
+.reliability-disclosure .panel-heading,
+.reliability-disclosure .reliability-table {
+  margin-left: 22px;
+  margin-right: 22px;
+}
+
+.reliability-disclosure .reliability-table {
+  margin-bottom: 22px;
+}
+
+.reliability-disclosure:not([open])
+  > :not(summary) {
+  display: none;
+}
+
+.history-panel,
+.performance-panel {
+  border-color: var(--line-soft);
+}
+
+@media (max-width: 800px) {
+  .reliability-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reliability-summary > span {
+    margin-left: 0;
+  }
+
+  .reliability-summary::after {
+    position: absolute;
+    right: 18px;
+  }
+}

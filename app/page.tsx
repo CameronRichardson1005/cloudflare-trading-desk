@@ -485,7 +485,7 @@ export default function Home() {
   >("overview");
   const [filter, setFilter] = useState<
     "all" | "complete" | "signals" | "warnings"
-  >("all");
+  >("signals");
   const [replayStep, setReplayStep] = useState(15);
   const [replayStatus, setReplayStatus] = useState<
     "ready" | "running" | "paused" | "complete"
@@ -732,11 +732,30 @@ export default function Home() {
     (stock) => stock.signal === "WARNING",
   ).length;
   const completeSymbols = session.symbols.length - warnings;
+
+  const reliabilitySelected =
+    session.symbolReliability?.filter(
+      (record) => record.status === "SELECTED",
+    ).length ?? 0;
+
+  const reliabilityExcluded =
+    session.symbolReliability?.filter(
+      (record) =>
+        record.status === "EXCLUDED_LOW_RELIABILITY",
+    ).length ?? 0;
+
+  const reliabilityLimited =
+    session.symbolReliability?.filter(
+      (record) =>
+        record.status ===
+        "NOT_SELECTED_RANKING_LIMIT",
+    ).length ?? 0;
+
   const displayDate = formatTradingDate(session.tradingDate);
   const updatedTime = formatUpdatedTime(session.updatedAt);
   const tableTitle =
     filter === "signals"
-      ? "INVEST signals"
+      ? "Today’s orders"
       : filter === "complete"
         ? "Complete symbols"
         : filter === "warnings"
@@ -881,77 +900,6 @@ export default function Home() {
             />
           </section>
 
-          {session.symbolReliability?.length ? (
-            <section
-              className="panel reliability-panel"
-              aria-label="IEX symbol reliability"
-            >
-              <div className="panel-heading">
-                <div>
-                  <span className="panel-kicker">
-                    MARKET DATA QUALITY
-                  </span>
-                  <h2>Opening-bar reliability</h2>
-                </div>
-                <div className="data-source">
-                  <span />
-                  Recent {session.dataFeed} opening sessions
-                </div>
-              </div>
-
-              <div
-                className="reliability-table"
-                role="table"
-                aria-label="Symbol reliability results"
-              >
-                <div
-                  className="reliability-row table-head"
-                  role="row"
-                >
-                  <span role="columnheader">Symbol</span>
-                  <span role="columnheader">Completeness</span>
-                  <span role="columnheader">History</span>
-                  <span role="columnheader">Selection result</span>
-                </div>
-
-                {session.symbolReliability.map((record) => (
-                  <div
-                    className="reliability-row"
-                    key={record.symbol}
-                    role="row"
-                  >
-                    <strong role="cell">{record.symbol}</strong>
-
-                    <span role="cell">
-                      <b>
-                        {(record.completeness * 100).toFixed(1)}%
-                      </b>
-                    </span>
-
-                    <span role="cell">
-                      {record.totalBars}/{record.expectedBars} bars
-                      across {record.usableDays} days
-                    </span>
-
-                    <span
-                      className={`reliability-status ${
-                        record.status === "SELECTED"
-                          ? "selected"
-                          : record.status ===
-                              "EXCLUDED_LOW_RELIABILITY"
-                            ? "excluded"
-                            : "limited"
-                      }`}
-                      role="cell"
-                    >
-                      {reliabilityStatusLabel(record.status)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
           <section className="panel symbol-panel" id="symbols">
             <div className="panel-heading">
               <div>
@@ -1085,6 +1033,90 @@ export default function Home() {
               </div>
             )}
           </section>
+
+          {session.symbolReliability?.length ? (
+            <details
+              className="panel reliability-panel reliability-disclosure"
+            >
+              <summary className="reliability-summary">
+                <div>
+                  <span className="panel-kicker">
+                    MARKET DATA QUALITY
+                  </span>
+                  <strong>Opening-bar reliability</strong>
+                </div>
+
+                <span>
+                  {reliabilitySelected} selected ·{" "}
+                  {reliabilityExcluded} excluded ·{" "}
+                  {reliabilityLimited} ranking-limited
+                </span>
+              </summary>
+              <div className="panel-heading">
+                <div>
+                  <span className="panel-kicker">
+                    MARKET DATA QUALITY
+                  </span>
+                  <h2>Opening-bar reliability</h2>
+                </div>
+                <div className="data-source">
+                  <span />
+                  Recent {session.dataFeed} opening sessions
+                </div>
+              </div>
+
+              <div
+                className="reliability-table"
+                role="table"
+                aria-label="Symbol reliability results"
+              >
+                <div
+                  className="reliability-row table-head"
+                  role="row"
+                >
+                  <span role="columnheader">Symbol</span>
+                  <span role="columnheader">Completeness</span>
+                  <span role="columnheader">History</span>
+                  <span role="columnheader">Selection result</span>
+                </div>
+
+                {session.symbolReliability.map((record) => (
+                  <div
+                    className="reliability-row"
+                    key={record.symbol}
+                    role="row"
+                  >
+                    <strong role="cell">{record.symbol}</strong>
+
+                    <span role="cell">
+                      <b>
+                        {(record.completeness * 100).toFixed(1)}%
+                      </b>
+                    </span>
+
+                    <span role="cell">
+                      {record.totalBars}/{record.expectedBars} bars
+                      across {record.usableDays} days
+                    </span>
+
+                    <span
+                      className={`reliability-status ${
+                        record.status === "SELECTED"
+                          ? "selected"
+                          : record.status ===
+                              "EXCLUDED_LOW_RELIABILITY"
+                            ? "excluded"
+                            : "limited"
+                      }`}
+                      role="cell"
+                    >
+                      {reliabilityStatusLabel(record.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
 
           {selectedStock && filter !== "warnings" ? (
             <section className="panel detail-panel" aria-label={`${selectedStock.symbol} details`}>
