@@ -71,6 +71,33 @@ type ProductionHealth = {
   dataStatus: "HEALTHY" | "WARNING";
 };
 
+type FibonacciPaperMetrics = {
+  qualifyingSetups: number;
+  closedTrades: number;
+  wins: number;
+  losses: number;
+  winRatePct: number | null;
+  profitFactor: number | null;
+  averageReturnPct: number | null;
+  cumulativeReturnPct: number;
+};
+
+type FibonacciPaperStatus = {
+  tradingDate: string;
+  updatedAt: string;
+  todayCompleted: boolean;
+  safetyStatus: "PAPER ONLY — NOT SUBMITTED";
+  forward: FibonacciPaperMetrics;
+  latestForwardSetup: {
+    tradingDate: string;
+    symbol: string;
+    fibonacciLevel: string;
+    outcome: "WIN" | "LOSS";
+    netReturnPct: number;
+    submitted: "NO";
+  } | null;
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -501,6 +528,12 @@ export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [accountSize, setAccountSize] = useState(10000);
   const [riskPercent, setRiskPercent] = useState(1);
+  const [fibonacciPaper, setFibonacciPaper] =
+    useState<FibonacciPaperStatus | null>(null);
+  const [fibonacciState, setFibonacciState] =
+    useState<"loading" | "current" | "unavailable">(
+      "loading",
+    );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -525,6 +558,47 @@ export default function Home() {
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setDataState("fallback");
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch("/api/fibonacci-paper/latest", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(
+            "Fibonacci paper request failed.",
+          );
+        }
+
+        return (await response.json()) as {
+          fibonacciPaper:
+            FibonacciPaperStatus | null;
+        };
+      })
+      .then((result) => {
+        setFibonacciPaper(result.fibonacciPaper);
+        setFibonacciState(
+          result.fibonacciPaper
+            ? "current"
+            : "unavailable",
+        );
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        setFibonacciState("unavailable");
       });
 
     return () => controller.abort();
@@ -954,6 +1028,176 @@ export default function Home() {
               </div>
             </section>
           ) : null}
+
+          <section
+            className="panel fibonacci-paper-panel"
+            aria-label="Fibonacci forward paper status"
+          >
+            <div className="panel-heading">
+              <div>
+                <span className="panel-kicker">
+                  FORWARD PAPER OBSERVATIONS
+                </span>
+                <h2>Fibonacci retracement paper strategy</h2>
+              </div>
+              <span className="fibonacci-safety">
+                PAPER ONLY · NOT SUBMITTED
+              </span>
+            </div>
+
+            {fibonacciPaper ? (
+              <>
+                <div className="fibonacci-summary">
+                  <div>
+                    <small>Today’s check</small>
+                    <strong
+                      className={
+                        fibonacciPaper.todayCompleted
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      {fibonacciPaper.todayCompleted
+                        ? "Completed"
+                        : "Not completed"}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Forward setups</small>
+                    <strong>
+                      {
+                        fibonacciPaper.forward
+                          .qualifyingSetups
+                      }
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Closed trades</small>
+                    <strong>
+                      {fibonacciPaper.forward.closedTrades}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Wins / losses</small>
+                    <strong>
+                      {fibonacciPaper.forward.wins} /{" "}
+                      {fibonacciPaper.forward.losses}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Profit factor</small>
+                    <strong>
+                      {fibonacciPaper.forward.profitFactor ===
+                      null
+                        ? "—"
+                        : fibonacciPaper.forward.profitFactor.toFixed(
+                            3,
+                          )}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Average return</small>
+                    <strong>
+                      {fibonacciPaper.forward
+                        .averageReturnPct === null
+                        ? "—"
+                        : `${
+                            fibonacciPaper.forward
+                              .averageReturnPct >= 0
+                              ? "+"
+                              : ""
+                          }${fibonacciPaper.forward.averageReturnPct.toFixed(
+                            4,
+                          )}%`}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Cumulative return</small>
+                    <strong>
+                      {fibonacciPaper.forward
+                        .cumulativeReturnPct >= 0
+                        ? "+"
+                        : ""}
+                      {fibonacciPaper.forward.cumulativeReturnPct.toFixed(
+                        4,
+                      )}
+                      %
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="fibonacci-latest">
+                  <div>
+                    <small>LATEST FORWARD SETUP</small>
+                    {fibonacciPaper.latestForwardSetup ? (
+                      <strong>
+                        {
+                          fibonacciPaper.latestForwardSetup
+                            .tradingDate
+                        }{" "}
+                        ·{" "}
+                        {
+                          fibonacciPaper.latestForwardSetup
+                            .symbol
+                        }{" "}
+                        ·{" "}
+                        {
+                          fibonacciPaper.latestForwardSetup
+                            .fibonacciLevel
+                        }
+                      </strong>
+                    ) : (
+                      <strong>None recorded yet</strong>
+                    )}
+                  </div>
+
+                  {fibonacciPaper.latestForwardSetup ? (
+                    <span
+                      className={`outcome ${fibonacciPaper.latestForwardSetup.outcome.toLowerCase()}`}
+                    >
+                      {
+                        fibonacciPaper.latestForwardSetup
+                          .outcome
+                      }{" "}
+                      ·{" "}
+                      {fibonacciPaper.latestForwardSetup
+                        .netReturnPct >= 0
+                        ? "+"
+                        : ""}
+                      {fibonacciPaper.latestForwardSetup.netReturnPct.toFixed(
+                        4,
+                      )}
+                      %
+                    </span>
+                  ) : (
+                    <span className="fibonacci-no-trade">
+                      0 orders submitted
+                    </span>
+                  )}
+                </div>
+
+                <p className="fibonacci-footnote">
+                  Historical validation trades are excluded from
+                  every metric shown here. Updated{" "}
+                  {formatUpdatedTime(
+                    fibonacciPaper.updatedAt,
+                  )}.
+                </p>
+              </>
+            ) : (
+              <div className="fibonacci-empty">
+                <strong>
+                  {fibonacciState === "loading"
+                    ? "Loading paper status"
+                    : "No forward paper status published yet"}
+                </strong>
+                <span>
+                  This section never estimates or imports
+                  historical validation results.
+                </span>
+              </div>
+            )}
+          </section>
 
           <section className="panel symbol-panel" id="symbols">
             <div className="panel-heading">

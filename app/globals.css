@@ -1906,3 +1906,143 @@ a {
     gap: 16px 24px;
   }
 }
+
+/* Forward-only Fibonacci paper strategy */
+.fibonacci-paper-panel {
+  border-color: rgba(84, 229, 154, 0.28);
+}
+
+.fibonacci-safety {
+  border: 1px solid rgba(84, 229, 154, 0.52);
+  border-radius: 5px;
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 7px 9px;
+}
+
+.fibonacci-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.fibonacci-summary > div {
+  background: rgba(13, 31, 65, 0.58);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.fibonacci-summary small,
+.fibonacci-summary strong {
+  display: block;
+}
+
+.fibonacci-summary small {
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.fibonacci-summary strong {
+  color: var(--cyan-soft);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 17px;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+
+.fibonacci-latest {
+  align-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 16px;
+  min-height: 62px;
+  padding: 12px 14px;
+}
+
+.fibonacci-latest small,
+.fibonacci-latest strong {
+  display: block;
+}
+
+.fibonacci-latest small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.fibonacci-latest strong {
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.fibonacci-no-trade {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fibonacci-footnote {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+  margin: 12px 16px 16px;
+}
+
+.fibonacci-empty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.fibonacci-empty strong {
+  color: var(--muted-bright);
+  font-size: 13px;
+}
+
+.fibonacci-empty span {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 7px;
+}
+
+@media (max-width: 1180px) {
+  .fibonacci-summary {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .fibonacci-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .fibonacci-latest {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fibonacci-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .fibonacci-safety {
+    font-size: 7px;
+  }
+}
