@@ -204,7 +204,7 @@ function validateSymbol(value: unknown): value is SessionSymbol {
   const validMinuteBars =
     symbol.minuteBars === undefined ||
     (Array.isArray(symbol.minuteBars) &&
-      symbol.minuteBars.length <= 15 &&
+      symbol.minuteBars.length <= 100 &&
       symbol.minuteBars.every(validateMinuteBar));
 
   return (
