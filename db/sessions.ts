@@ -42,6 +42,10 @@ export type StrategyRule = {
 };
 
 export type StrategySnapshot = {
+  strategyName?: string;
+  strategyStatus?: string;
+  detail?: string;
+  rejectionReason?: string;
   atr?: number;
   openingOpen?: number;
   openingHigh?: number;
@@ -49,6 +53,11 @@ export type StrategySnapshot = {
   openingClose?: number;
   candleRange?: number;
   atrThreshold?: number;
+  rewardRisk?: number;
+  confirmationTime?: string;
+  retracementPrice?: number;
+  impulseAtrMultiple?: number;
+  pullbackVolumeRatio?: number;
   isManipulation?: boolean;
   isRed?: boolean;
 };
@@ -121,7 +130,12 @@ export type ProductionHealth = {
 export type TradingSession = {
   id: string;
   tradingDate: string;
-  source: "REPLAY" | "LIVE";
+  source:
+    | "REPLAY"
+    | "LIVE"
+    | "LIVE_MANIPULATION"
+    | "LIVE_FIBONACCI"
+    | "LIVE_FIBONACCI_FINAL";
   dataFeed: "IEX" | "SIP";
   status: "COMPLETE" | "INCOMPLETE";
   updatedAt: string;

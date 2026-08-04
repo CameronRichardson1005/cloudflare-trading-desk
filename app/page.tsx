@@ -21,6 +21,10 @@ type DashboardSymbol = {
     requirement: string;
   }[];
   strategy?: {
+    strategyName?: string;
+    strategyStatus?: string;
+    detail?: string;
+    rejectionReason?: string;
     atr?: number;
     openingOpen?: number;
     openingHigh?: number;
@@ -28,6 +32,11 @@ type DashboardSymbol = {
     openingClose?: number;
     candleRange?: number;
     atrThreshold?: number;
+    rewardRisk?: number;
+    confirmationTime?: string;
+    retracementPrice?: number;
+    impulseAtrMultiple?: number;
+    pullbackVolumeRatio?: number;
     isManipulation?: boolean;
     isRed?: boolean;
   };
@@ -118,7 +127,12 @@ type FibonacciPaperStatus = {
 type DashboardSession = {
   id: string;
   tradingDate: string;
-  source: "REPLAY" | "LIVE";
+  source:
+    | "REPLAY"
+    | "LIVE"
+    | "LIVE_MANIPULATION"
+    | "LIVE_FIBONACCI"
+    | "LIVE_FIBONACCI_FINAL";
   dataFeed: "IEX" | "SIP";
   status: "COMPLETE" | "INCOMPLETE";
   updatedAt: string;
@@ -1295,57 +1309,146 @@ export default function Home() {
                   <span role="columnheader">Symbol</span>
                   <span role="columnheader">Signal</span>
                   <span role="columnheader">Outcome</span>
-                  <span role="columnheader">Strategy levels</span>
+                  <span role="columnheader">Order plan</span>
                   <span role="columnheader">Data quality</span>
                 </div>
-                {filteredSymbols.map((stock) => (
-                  <button
-                    className={`symbol-row symbol-button ${
-                      selectedSymbol === stock.symbol ? "selected" : ""
-                    }`}
-                    key={stock.symbol}
-                    onClick={() => setSelectedSymbol(stock.symbol)}
-                    role="row"
-                    type="button"
-                  >
-                    <strong role="cell">{stock.symbol}</strong>
-                    <span role="cell">
-                      <span className={`signal ${stock.signal.toLowerCase().replace(" ", "-")}`}>
-                        {stock.signal}
+
+                {filteredSymbols.map((stock) => {
+                  const rowRiskPerShare = stock.levels
+                    ? Math.max(
+                        stock.levels.buy -
+                          stock.levels.tradingStop,
+                        0,
+                      )
+                    : 0;
+
+                  const rowRiskBudget =
+                    accountSize * (riskPercent / 100);
+
+                  const riskShares =
+                    rowRiskPerShare > 0
+                      ? Math.floor(
+                          rowRiskBudget / rowRiskPerShare,
+                        )
+                      : 0;
+
+                  const valueCapShares = stock.levels
+                    ? Math.floor(5000 / stock.levels.buy)
+                    : 0;
+
+                  const calculatedShares = Math.min(
+                    riskShares,
+                    valueCapShares,
+                    1000,
+                  );
+
+                  const orderShares =
+                    stock.webullPreview?.quantity ??
+                    calculatedShares;
+
+                  const investDollars =
+                    stock.webullPreview
+                      ?.estimatedPositionValue ??
+                    (stock.levels
+                      ? orderShares * stock.levels.buy
+                      : undefined);
+
+                  return (
+                    <button
+                      className={`symbol-row symbol-button ${
+                        selectedSymbol === stock.symbol
+                          ? "selected"
+                          : ""
+                      }`}
+                      key={stock.symbol}
+                      onClick={() =>
+                        setSelectedSymbol(stock.symbol)
+                      }
+                      role="row"
+                      type="button"
+                    >
+                      <strong role="cell">
+                        {stock.symbol}
+                      </strong>
+
+                      <span role="cell">
+                        <span
+                          className={`signal ${stock.signal
+                            .toLowerCase()
+                            .replace(" ", "-")}`}
+                        >
+                          {stock.signal}
+                        </span>
                       </span>
-                    </span>
-                    <span role="cell">
-                      <OutcomeBadge outcome={stock.outcome} />
-                    </span>
-                    <span className="strategy-levels" role="cell">
-                      {stock.levels ? (
-                        <>
-                          <span>
-                            <small>Buy</small>
-                            <b>${stock.levels.buy.toFixed(4)}</b>
-                          </span>
-                          <span>
-                            <small>Target</small>
-                            <b>${stock.levels.target.toFixed(4)}</b>
-                          </span>
-                          <span>
-                            <small>Trading stop loss</small>
-                            <b>${stock.levels.tradingStop.toFixed(4)}</b>
-                          </span>
-                        </>
-                      ) : (
-                        <span className="no-levels">—</span>
-                      )}
-                    </span>
-                    <span className="quality" role="cell">
-                      <b>
-                        {stock.barsProcessed}/{stock.barsExpected} bars
-                      </b>
-                      <i>·</i>
-                      {stock.detail}
-                    </span>
-                  </button>
-                ))}
+
+                      <span role="cell">
+                        <OutcomeBadge
+                          outcome={stock.outcome}
+                        />
+                      </span>
+
+                      <span
+                        className="order-plan"
+                        role="cell"
+                      >
+                        {stock.levels ? (
+                          <>
+                            <span className="order-plan-invest">
+                              <small>Invest dollars</small>
+                              <strong>
+                                {investDollars !== undefined
+                                  ? money(investDollars)
+                                  : "—"}
+                              </strong>
+                              <i>
+                                {orderShares.toLocaleString()} shares
+                              </i>
+                            </span>
+
+                            <span className="order-plan-buy">
+                              <small>Buy at</small>
+                              <strong>
+                                {money(stock.levels.buy)}
+                              </strong>
+                              <i>Limit price per share</i>
+                            </span>
+
+                            <span className="order-plan-levels">
+                              <span>
+                                Target{" "}
+                                <b>
+                                  {money(
+                                    stock.levels.target,
+                                  )}
+                                </b>
+                              </span>
+                              <span>
+                                Stop{" "}
+                                <b>
+                                  {money(
+                                    stock.levels
+                                      .tradingStop,
+                                  )}
+                                </b>
+                              </span>
+                            </span>
+                          </>
+                        ) : (
+                          <span className="no-levels">—</span>
+                        )}
+                      </span>
+
+                      <span className="quality" role="cell">
+                        <b>
+                          {stock.barsProcessed}/
+                          {stock.barsExpected} bars
+                        </b>
+                        <i>·</i>
+                        {stock.detail}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>

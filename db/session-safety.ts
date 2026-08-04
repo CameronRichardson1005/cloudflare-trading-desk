@@ -5,7 +5,7 @@ export function suppressUnsafeLevels(
 ): TradingSession {
   const symbols = session.symbols.map((symbol) => {
     const complete =
-      symbol.barsProcessed === symbol.barsExpected &&
+      symbol.barsProcessed >= symbol.barsExpected &&
       symbol.detail.toLowerCase() === "complete";
 
     if (!complete) {
@@ -29,7 +29,7 @@ export function suppressUnsafeLevels(
   });
 
   const allComplete = symbols.every(
-    (symbol) => symbol.barsProcessed === symbol.barsExpected,
+    (symbol) => symbol.barsProcessed >= symbol.barsExpected,
   );
 
   return {

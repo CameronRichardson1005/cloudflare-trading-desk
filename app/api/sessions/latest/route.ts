@@ -45,8 +45,17 @@ function validateMinuteBar(value: unknown) {
 function validateStrategy(value: unknown) {
   if (value === undefined) return true;
   if (!value || typeof value !== "object") return false;
+
   const strategy = value as Record<string, unknown>;
+
+  const validOptionalString = (candidate: unknown) =>
+    candidate === undefined || typeof candidate === "string";
+
   return (
+    validOptionalString(strategy.strategyName) &&
+    validOptionalString(strategy.strategyStatus) &&
+    validOptionalString(strategy.detail) &&
+    validOptionalString(strategy.rejectionReason) &&
     validOptionalNumber(strategy.atr) &&
     validOptionalNumber(strategy.openingOpen) &&
     validOptionalNumber(strategy.openingHigh) &&
@@ -54,9 +63,19 @@ function validateStrategy(value: unknown) {
     validOptionalNumber(strategy.openingClose) &&
     validOptionalNumber(strategy.candleRange) &&
     validOptionalNumber(strategy.atrThreshold) &&
-    (strategy.isManipulation === undefined ||
-      typeof strategy.isManipulation === "boolean") &&
-    (strategy.isRed === undefined || typeof strategy.isRed === "boolean")
+    validOptionalNumber(strategy.rewardRisk) &&
+    validOptionalString(strategy.confirmationTime) &&
+    validOptionalNumber(strategy.retracementPrice) &&
+    validOptionalNumber(strategy.impulseAtrMultiple) &&
+    validOptionalNumber(strategy.pullbackVolumeRatio) &&
+    (
+      strategy.isManipulation === undefined ||
+      typeof strategy.isManipulation === "boolean"
+    ) &&
+    (
+      strategy.isRed === undefined ||
+      typeof strategy.isRed === "boolean"
+    )
   );
 }
 
@@ -231,7 +250,13 @@ function validateSession(value: unknown): value is TradingSession {
   return (
     typeof session.id === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(String(session.tradingDate)) &&
-    (session.source === "REPLAY" || session.source === "LIVE") &&
+    (
+      session.source === "REPLAY" ||
+      session.source === "LIVE" ||
+      session.source === "LIVE_MANIPULATION" ||
+      session.source === "LIVE_FIBONACCI" ||
+      session.source === "LIVE_FIBONACCI_FINAL"
+    ) &&
     ["IEX", "SIP"].includes(String(session.dataFeed)) &&
     (session.status === "COMPLETE" || session.status === "INCOMPLETE") &&
     !Number.isNaN(Date.parse(String(session.updatedAt))) &&

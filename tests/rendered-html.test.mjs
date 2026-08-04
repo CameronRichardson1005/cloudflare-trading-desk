@@ -35,7 +35,8 @@ test("renders development preview metadata", async () => {
   assert.match(html, /READ-ONLY/);
   assert.match(html, /Historical/);
   assert.match(html, /SIP/);
-  assert.match(html, /Trading stop loss/);
+  assert.match(html, /Invest dollars/);
+  assert.match(html, /Buy at/);
   assert.match(html, /Order placement disabled/);
   assert.match(html, /0 orders submitted/);
   assert.match(html, /Session history/);
