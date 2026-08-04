@@ -2112,3 +2112,103 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Primary order instructions */
+.trade-action-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.invest-dollars-primary,
+.buy-price-primary {
+  border-radius: 9px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.invest-dollars-primary {
+  background: rgba(84, 229, 154, 0.1);
+  border: 1px solid rgba(84, 229, 154, 0.48);
+}
+
+.buy-price-primary {
+  background: rgba(32, 218, 242, 0.12);
+  border: 1px solid rgba(32, 218, 242, 0.58);
+  box-shadow:
+    0 0 24px rgba(32, 218, 242, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.invest-dollars-primary small,
+.invest-dollars-primary strong,
+.invest-dollars-primary span,
+.buy-price-primary small,
+.buy-price-primary strong,
+.buy-price-primary span {
+  display: block;
+}
+
+.invest-dollars-primary small,
+.buy-price-primary small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.invest-dollars-primary small {
+  color: var(--green);
+}
+
+.buy-price-primary small {
+  color: var(--cyan);
+}
+
+.invest-dollars-primary strong,
+.buy-price-primary strong {
+  font-family: var(--font-geist-mono), monospace;
+  line-height: 1;
+  margin-top: 9px;
+}
+
+.invest-dollars-primary strong {
+  color: var(--green);
+  font-size: clamp(25px, 3vw, 36px);
+}
+
+.buy-price-primary strong {
+  color: white;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 18px rgba(32, 218, 242, 0.25);
+}
+
+.invest-dollars-primary span,
+.buy-price-primary span {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+.risk-results strong {
+  font-size: 16px;
+  font-weight: 750;
+}
+
+@media (max-width: 640px) {
+  .trade-action-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .buy-price-primary {
+    grid-row: 2;
+  }
+
+  .buy-price-primary strong {
+    font-size: 40px;
+  }
+}

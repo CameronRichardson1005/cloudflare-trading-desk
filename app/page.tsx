@@ -1535,22 +1535,50 @@ export default function Home() {
                           </span>
                         </label>
                       </div>
+                      <div className="trade-action-summary">
+                        <div className="invest-dollars-primary">
+                          <small>Invest dollars</small>
+                          <strong>{money(requiredCapital)}</strong>
+                          <span>
+                            Total capital for the suggested position
+                          </span>
+                        </div>
+
+                        <div className="buy-price-primary">
+                          <small>Buy at</small>
+                          <strong>
+                            {money(selectedStock.levels.buy)}
+                          </strong>
+                          <span>Limit-buy price per share</span>
+                        </div>
+                      </div>
+
                       <div className="risk-results">
+                        <div>
+                          <small>Number of shares</small>
+                          <strong>
+                            {suggestedShares.toLocaleString()}
+                          </strong>
+                        </div>
+                        <div>
+                          <small>Trading stop loss</small>
+                          <strong>
+                            {money(selectedStock.levels.tradingStop)}
+                          </strong>
+                        </div>
+                        <div>
+                          <small>Sell target</small>
+                          <strong>
+                            {money(selectedStock.levels.target)}
+                          </strong>
+                        </div>
+                        <div>
+                          <small>Maximum loss</small>
+                          <strong>{money(maximumLoss)}</strong>
+                        </div>
                         <div>
                           <small>Risk budget</small>
                           <strong>{money(riskBudget)}</strong>
-                        </div>
-                        <div>
-                          <small>Suggested shares</small>
-                          <strong>{suggestedShares.toLocaleString()}</strong>
-                        </div>
-                        <div>
-                          <small>Required capital</small>
-                          <strong>{money(requiredCapital)}</strong>
-                        </div>
-                        <div>
-                          <small>Max loss at trading stop</small>
-                          <strong>{money(maximumLoss)}</strong>
                         </div>
                         <div>
                           <small>Profit at target</small>
