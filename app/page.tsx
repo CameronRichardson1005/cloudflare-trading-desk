@@ -250,6 +250,167 @@ function formatUpdatedTime(timestamp: string) {
   }).format(new Date(timestamp));
 }
 
+type SessionFreshnessStatus = "current" | "stale" | "checking";
+
+type SessionFreshness = {
+  status: SessionFreshnessStatus;
+  title: string;
+  message: string;
+  ageLabel: string;
+  dateMatches: boolean;
+  apiVerified: boolean;
+  finalEvaluationReceived: boolean;
+};
+
+function newYorkDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/New_York",
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatSessionAge(milliseconds: number) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    return "Update time unavailable";
+  }
+
+  const minutes = Math.floor(milliseconds / 60000);
+
+  if (minutes < 1) {
+    return "Updated less than a minute ago";
+  }
+
+  if (minutes < 60) {
+    return `Updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours < 24) {
+    return `Updated ${hours} hour${hours === 1 ? "" : "s"}${
+      remainingMinutes
+        ? ` ${remainingMinutes} minute${
+            remainingMinutes === 1 ? "" : "s"
+          }`
+        : ""
+    } ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function getSessionFreshness({
+  session,
+  dataState,
+  now,
+}: {
+  session: DashboardSession;
+  dataState: "loading" | "current" | "fallback";
+  now: Date | null;
+}): SessionFreshness {
+  const finalEvaluationReceived =
+    session.source === "LIVE_FIBONACCI_FINAL";
+
+  if (!now || dataState === "loading") {
+    return {
+      status: "checking",
+      title: "Session check in progress",
+      message:
+        "The dashboard is verifying the latest stored trading session.",
+      ageLabel: "Checking latest update",
+      dateMatches: false,
+      apiVerified: false,
+      finalEvaluationReceived,
+    };
+  }
+
+  const marketDate = newYorkDateKey(now);
+  const dateMatches = session.tradingDate === marketDate;
+  const apiVerified = dataState === "current";
+  const updatedAt = new Date(session.updatedAt);
+  const updatedTimestamp = updatedAt.getTime();
+  const timestampValid = Number.isFinite(updatedTimestamp);
+  const ageMilliseconds = timestampValid
+    ? now.getTime() - updatedTimestamp
+    : Number.NaN;
+  const ageHours = ageMilliseconds / 3600000;
+  const ageLabel = formatSessionAge(ageMilliseconds);
+
+  if (!apiVerified) {
+    return {
+      status: "stale",
+      title: "Fallback session displayed",
+      message: `This is the verified fallback snapshot from ${
+        session.tradingDate
+      }, not a confirmed current API session. Do not use these values for today's trading decisions.`,
+      ageLabel,
+      dateMatches,
+      apiVerified,
+      finalEvaluationReceived,
+    };
+  }
+
+  if (!dateMatches) {
+    return {
+      status: "stale",
+      title: "Stale trading session",
+      message: `The dashboard is showing ${
+        session.tradingDate
+      } data, but the current New York market date is ${marketDate}. Do not use these values for today's trading decisions.`,
+      ageLabel,
+      dateMatches,
+      apiVerified,
+      finalEvaluationReceived,
+    };
+  }
+
+  if (!timestampValid) {
+    return {
+      status: "stale",
+      title: "Session timestamp invalid",
+      message:
+        "The dashboard could not verify when this session was last updated. Treat all displayed values as historical.",
+      ageLabel: "Invalid update timestamp",
+      dateMatches,
+      apiVerified,
+      finalEvaluationReceived,
+    };
+  }
+
+  if (ageHours > 18) {
+    return {
+      status: "stale",
+      title: "Session update is too old",
+      message:
+        "The trading date matches today, but the latest update is more than 18 hours old. Do not rely on this session until a new run is published.",
+      ageLabel,
+      dateMatches,
+      apiVerified,
+      finalEvaluationReceived,
+    };
+  }
+
+  return {
+    status: "current",
+    title: "Current session verified",
+    message: `This session belongs to today's New York market date and was loaded from the dashboard API.`,
+    ageLabel,
+    dateMatches,
+    apiVerified,
+    finalEvaluationReceived,
+  };
+}
+
 type RejectionDefinition = {
   title: string;
   explanation: string;
@@ -440,6 +601,7 @@ function Icon({
     | "performance"
     | "audit"
     | "glossary"
+    | "comparison"
     | "calendar";
   size?: number;
 }) {
@@ -480,6 +642,14 @@ function Icon({
         <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" />
         <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22V5.5Z" />
         <path d="M7 7h2M15 7h2M7 11h2M15 11h2" />
+      </>
+    ),
+    comparison: (
+      <>
+        <path d="M7 7h12" />
+        <path d="m16 4 3 3-3 3" />
+        <path d="M17 17H5" />
+        <path d="m8 14-3 3 3 3" />
       </>
     ),
     calendar: (
@@ -785,6 +955,18 @@ export default function Home() {
   const [dataState, setDataState] = useState<"loading" | "current" | "fallback">(
     "loading",
   );
+  const [freshnessNow, setFreshnessNow] = useState<Date | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const refreshClock = () => setFreshnessNow(new Date());
+
+    refreshClock();
+    const interval = window.setInterval(refreshClock, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
   const [activeSection, setActiveSection] = useState<
     | "today"
     | "operations"
@@ -792,6 +974,7 @@ export default function Home() {
     | "symbols"
     | "diagnosis"
     | "glossary"
+    | "comparison"
     | "history"
     | "performance"
     | "replay"
@@ -914,6 +1097,7 @@ export default function Home() {
       | "symbols"
       | "diagnosis"
       | "glossary"
+      | "comparison"
       | "history"
       | "performance"
       | "replay"
@@ -1061,6 +1245,145 @@ export default function Home() {
   ).length;
   const completeSymbols = session.symbols.length - warnings;
 
+  const comparisonSessions =
+    dataState === "current"
+      ? [...sessions].sort((first, second) => {
+          const firstTime = new Date(first.updatedAt).getTime();
+          const secondTime = new Date(second.updatedAt).getTime();
+
+          if (
+            Number.isFinite(firstTime) &&
+            Number.isFinite(secondTime) &&
+            firstTime !== secondTime
+          ) {
+            return secondTime - firstTime;
+          }
+
+          return second.tradingDate.localeCompare(
+            first.tradingDate,
+          );
+        })
+      : [];
+
+  const comparisonCurrent = comparisonSessions[0] ?? null;
+  const comparisonPrevious = comparisonSessions[1] ?? null;
+
+  const comparisonCurrentSymbols = new Map(
+    comparisonCurrent?.symbols.map((stock) => [
+      stock.symbol,
+      stock,
+    ]) ?? [],
+  );
+
+  const comparisonPreviousSymbols = new Map(
+    comparisonPrevious?.symbols.map((stock) => [
+      stock.symbol,
+      stock,
+    ]) ?? [],
+  );
+
+  const comparisonSymbolNames = Array.from(
+    new Set([
+      ...comparisonCurrentSymbols.keys(),
+      ...comparisonPreviousSymbols.keys(),
+    ]),
+  ).sort();
+
+  const comparisonRows = comparisonSymbolNames.map(
+    (symbol) => {
+      const currentStock =
+        comparisonCurrentSymbols.get(symbol) ?? null;
+      const previousStock =
+        comparisonPreviousSymbols.get(symbol) ?? null;
+
+      const change =
+        !previousStock && currentStock
+          ? "ADDED"
+          : previousStock && !currentStock
+            ? "REMOVED"
+            : previousStock?.signal !== currentStock?.signal
+              ? "CHANGED"
+              : "UNCHANGED";
+
+      return {
+        symbol,
+        currentStock,
+        previousStock,
+        change,
+      };
+    },
+  );
+
+  const comparisonAdded = comparisonRows.filter(
+    (row) => row.change === "ADDED",
+  );
+
+  const comparisonRemoved = comparisonRows.filter(
+    (row) => row.change === "REMOVED",
+  );
+
+  const comparisonChanged = comparisonRows.filter(
+    (row) => row.change === "CHANGED",
+  );
+
+  const comparisonCurrentSignals =
+    comparisonCurrent?.symbols.filter(
+      (stock) => stock.signal === "INVEST",
+    ).length ?? 0;
+
+  const comparisonPreviousSignals =
+    comparisonPrevious?.symbols.filter(
+      (stock) => stock.signal === "INVEST",
+    ).length ?? 0;
+
+  const comparisonCurrentWarnings =
+    comparisonCurrent?.symbols.filter(
+      (stock) => stock.signal === "WARNING",
+    ).length ?? 0;
+
+  const comparisonPreviousWarnings =
+    comparisonPrevious?.symbols.filter(
+      (stock) => stock.signal === "WARNING",
+    ).length ?? 0;
+
+  const comparisonCurrentBars =
+    comparisonCurrent?.symbols.reduce(
+      (total, stock) => total + stock.barsProcessed,
+      0,
+    ) ?? 0;
+
+  const comparisonCurrentExpectedBars =
+    comparisonCurrent?.symbols.reduce(
+      (total, stock) => total + stock.barsExpected,
+      0,
+    ) ?? 0;
+
+  const comparisonPreviousBars =
+    comparisonPrevious?.symbols.reduce(
+      (total, stock) => total + stock.barsProcessed,
+      0,
+    ) ?? 0;
+
+  const comparisonPreviousExpectedBars =
+    comparisonPrevious?.symbols.reduce(
+      (total, stock) => total + stock.barsExpected,
+      0,
+    ) ?? 0;
+
+  const comparisonCurrentCompleteness =
+    comparisonCurrentExpectedBars > 0
+      ? (comparisonCurrentBars /
+          comparisonCurrentExpectedBars) *
+        100
+      : 0;
+
+  const comparisonPreviousCompleteness =
+    comparisonPreviousExpectedBars > 0
+      ? (comparisonPreviousBars /
+          comparisonPreviousExpectedBars) *
+        100
+      : 0;
+
   const attentionSymbols = session.symbols.filter(
     (stock) =>
       stock.signal === "WARNING" ||
@@ -1100,6 +1423,77 @@ export default function Home() {
 
   const displayDate = formatTradingDate(session.tradingDate);
   const updatedTime = formatUpdatedTime(session.updatedAt);
+  const freshness = getSessionFreshness({
+    session,
+    dataState,
+    now: freshnessNow,
+  });
+
+  const readinessChecks = [
+    {
+      label: "Current session verified",
+      passed: freshness.status === "current",
+      detail:
+        freshness.status === "current"
+          ? "The session belongs to today's New York market date."
+          : freshness.message,
+    },
+    {
+      label: "Opening data complete",
+      passed: totalBars === expectedBars && warnings === 0,
+      detail:
+        totalBars === expectedBars && warnings === 0
+          ? `${totalBars}/${expectedBars} required bars were available.`
+          : `${totalBars}/${expectedBars} bars were available with ${warnings} warning${
+              warnings === 1 ? "" : "s"
+            }.`,
+    },
+    {
+      label: "Final Fibonacci evaluation received",
+      passed: freshness.finalEvaluationReceived,
+      detail: freshness.finalEvaluationReceived
+        ? "The final Fibonacci session payload was received."
+        : `Current session source: ${session.source}.`,
+    },
+    {
+      label: "Strategy decisions available",
+      passed: session.symbols.length > 0,
+      detail:
+        session.symbols.length > 0
+          ? `${session.symbols.length} symbol decision${
+              session.symbols.length === 1 ? "" : "s"
+            } are available.`
+          : "No symbol decisions are available.",
+    },
+    {
+      label: "Broker submission disabled",
+      passed: true,
+      detail:
+        "Submitted means sent from this system to a broker for execution. This dashboard cannot submit orders.",
+    },
+    {
+      label: "Orders sent to broker",
+      passed: true,
+      detail: "0 orders were sent to a broker for execution.",
+    },
+  ];
+
+  const readinessStatus =
+    freshness.status === "checking"
+      ? "CHECKING SESSION"
+      : freshness.status === "stale"
+        ? "BLOCKED — SESSION STALE"
+        : totalBars !== expectedBars || warnings > 0
+          ? "BLOCKED — DATA INCOMPLETE"
+          : !freshness.finalEvaluationReceived
+            ? "BLOCKED — STRATEGY NOT FINAL"
+            : session.symbols.length === 0
+              ? "BLOCKED — NO DECISIONS"
+              : "READY FOR PAPER REVIEW";
+
+  const readinessReady =
+    readinessStatus === "READY FOR PAPER REVIEW";
+
   const tableTitle =
     filter === "signals"
       ? "Today’s orders"
@@ -1231,6 +1625,26 @@ export default function Home() {
             </button>
 
             <button
+              aria-current={
+                activeSection === "comparison"
+                  ? "page"
+                  : undefined
+              }
+              className={`nav-item ${
+                activeSection === "comparison"
+                  ? "active"
+                  : ""
+              }`}
+              data-tooltip="Session comparison"
+              title="Session comparison"
+              onClick={() => navigateTo("comparison")}
+              type="button"
+            >
+              <Icon name="comparison" />
+              <span>Session Comparison</span>
+            </button>
+
+            <button
               aria-current={activeSection === "history" ? "page" : undefined}
               className={`nav-item ${activeSection === "history" ? "active" : ""}`}
               data-tooltip="Session history"
@@ -1290,7 +1704,10 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className={`workspace section-${activeSection}`} id="overview">
+      <section
+        className={`workspace section-${activeSection} freshness-${freshness.status}`}
+        id="overview"
+      >
         <header className="topbar">
           <div>
             <p className="mobile-kicker">TRADING OPERATIONS</p>
@@ -1309,6 +1726,58 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        <section
+          className={`freshness-banner freshness-banner-${freshness.status}`}
+          aria-live="polite"
+          aria-label="Session freshness status"
+        >
+          <span className="freshness-banner-icon" aria-hidden="true">
+            {freshness.status === "current"
+              ? "✓"
+              : freshness.status === "stale"
+                ? "!"
+                : "…"}
+          </span>
+
+          <div className="freshness-banner-copy">
+            <small>SESSION FRESHNESS</small>
+            <strong>{freshness.title}</strong>
+            <p>{freshness.message}</p>
+          </div>
+
+          <div className="freshness-banner-facts">
+            <span>
+              <small>Trading date</small>
+              <strong>{session.tradingDate}</strong>
+            </span>
+
+            <span>
+              <small>Source</small>
+              <strong>
+                {dataState === "current"
+                  ? "API SESSION"
+                  : dataState === "fallback"
+                    ? "FALLBACK"
+                    : "CHECKING"}
+              </strong>
+            </span>
+
+            <span>
+              <small>Latest update</small>
+              <strong>{freshness.ageLabel}</strong>
+            </span>
+
+            <span>
+              <small>Final evaluation</small>
+              <strong>
+                {freshness.finalEvaluationReceived
+                  ? "RECEIVED"
+                  : "NOT CONFIRMED"}
+              </strong>
+            </span>
+          </div>
+        </section>
 
         <div className="content">
           <section className="today-page" aria-label="Today operations">
@@ -1405,9 +1874,12 @@ export default function Home() {
               </article>
 
               <article className="today-operation-card">
-                <small>Orders submitted</small>
+                <small>Sent to broker</small>
                 <strong>0</strong>
-                <span>Paper mode · no live orders.</span>
+                <span>
+                  Submitted means sent from this system to a broker
+                  for execution. None were sent.
+                </span>
               </article>
 
               <article className="today-operation-card">
@@ -1550,13 +2022,72 @@ export default function Home() {
                     <small>STAGE 5</small>
                     <strong>Broker submission</strong>
                     <p>
-                      Webull remains preview-only. No order was submitted,
-                      cancelled, or replaced.
+                      Webull remains preview-only. Submitted means sent
+                      from this system to a broker for execution. No order was
+                      sent, cancelled, or replaced.
                     </p>
                   </div>
 
                   <b>DISABLED</b>
                 </article>
+              </div>
+            </section>
+
+            <section
+              className={`readiness-gate ${
+                readinessReady
+                  ? "readiness-ready"
+                  : readinessStatus === "CHECKING SESSION"
+                    ? "readiness-checking"
+                    : "readiness-blocked"
+              }`}
+              aria-label="Trade readiness"
+            >
+              <div className="readiness-heading">
+                <div>
+                  <span className="panel-kicker">
+                    PAPER-SESSION READINESS
+                  </span>
+                  <h3>{readinessStatus}</h3>
+                  <p>
+                    This gate confirms whether the current dashboard session
+                    is reliable enough for paper review. It does not authorize
+                    live trading or broker execution.
+                  </p>
+                </div>
+
+                <span
+                  className="readiness-status-icon"
+                  aria-hidden="true"
+                >
+                  {readinessReady
+                    ? "✓"
+                    : readinessStatus === "CHECKING SESSION"
+                      ? "…"
+                      : "!"}
+                </span>
+              </div>
+
+              <div className="readiness-checklist">
+                {readinessChecks.map((check) => (
+                  <article
+                    className={`readiness-check ${
+                      check.passed
+                        ? "readiness-check-pass"
+                        : "readiness-check-fail"
+                    }`}
+                    key={check.label}
+                  >
+                    <span aria-hidden="true">
+                      {check.passed ? "✓" : "×"}
+                    </span>
+
+                    <div>
+                      <strong>{check.label}</strong>
+                      <p>{check.detail}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
 
@@ -1705,8 +2236,9 @@ export default function Home() {
               <div>
                 <strong>Paper-trading safety remains active</strong>
                 <p>
-                  Dashboard information is read-only. Webull is preview-only,
-                  and this interface cannot submit, cancel, or replace orders.
+                  Dashboard information is read-only. Submitting an order
+                  means sending it from this system to a broker for execution.
+                  This interface cannot submit, cancel, or replace orders.
                 </p>
               </div>
             </section>
@@ -1883,9 +2415,12 @@ export default function Home() {
               </article>
 
               <article className="operations-status-card">
-                <small>Orders submitted</small>
+                <small>Sent to broker</small>
                 <strong>0</strong>
-                <span>No live or paper broker orders submitted.</span>
+                <span>
+                  Submitted means sent from this system to a broker
+                  for execution. None were sent.
+                </span>
               </article>
 
               <article className="operations-status-card">
@@ -2018,7 +2553,8 @@ export default function Home() {
                     <small>STAGE 5</small>
                     <strong>Broker submission</strong>
                     <p>
-                      Webull is preview-only. No order was submitted,
+                      Webull is preview-only. Submitted means sent from
+                      this system to a broker for execution. No order was sent,
                       cancelled, or replaced.
                     </p>
                   </div>
@@ -2033,8 +2569,9 @@ export default function Home() {
               <div>
                 <strong>Execution safety confirmed</strong>
                 <p>
-                  This dashboard is read-only. It cannot place, cancel, or
-                  replace broker orders.
+                  This dashboard is read-only. Submitting an order means
+                  sending it from this system to a broker for execution. This
+                  dashboard cannot submit, cancel, or replace broker orders.
                 </p>
               </div>
             </section>
@@ -3212,10 +3749,50 @@ export default function Home() {
                     </h3>
 
                     <div className="diagnosis-general-explanation">
-                      <strong>General explanation</strong>
-                      <p>
-                        {diagnosisExplanation(selectedStock)}
-                      </p>
+                      <strong>
+                        {selectedStock.signal === "INVEST"
+                          ? "Why it qualified"
+                          : "General explanation"}
+                      </strong>
+
+                      {selectedStock.signal === "INVEST" ? (
+                        selectedStock.rules?.some(
+                          (rule) => rule.passed,
+                        ) ? (
+                          <ul className="diagnosis-qualified-list">
+                            {selectedStock.rules
+                              .filter((rule) => rule.passed)
+                              .map((rule) => (
+                                <li key={rule.label}>
+                                  <span
+                                    className="diagnosis-qualified-check"
+                                    aria-hidden="true"
+                                  >
+                                    ✓
+                                  </span>
+
+                                  <div>
+                                    <strong>{rule.label}</strong>
+                                    <small>
+                                      Actual: {rule.actual} · Required:{" "}
+                                      {rule.requirement}
+                                    </small>
+                                  </div>
+                                </li>
+                              ))}
+                          </ul>
+                        ) : (
+                          <p>
+                            This stored session marked the stock as INVEST,
+                            but it did not include the rule-by-rule audit.
+                            The dashboard will not invent missing reasons.
+                          </p>
+                        )
+                      ) : (
+                        <p>
+                          {diagnosisExplanation(selectedStock)}
+                        </p>
+                      )}
                     </div>
 
                     {selectedStock.strategy
@@ -3569,6 +4146,343 @@ export default function Home() {
                   stock in the Signals table.
                 </span>
               </div>
+            )}
+          </section>
+
+          <section
+            className="comparison-page"
+            aria-label="Run-to-run session comparison"
+          >
+            <div className="comparison-heading">
+              <div>
+                <span className="panel-kicker">
+                  RUN-TO-RUN ANALYSIS
+                </span>
+                <h2>Session comparison</h2>
+                <p>
+                  Compares the two newest stored API sessions.
+                  Fallback data is never silently used as the
+                  previous session.
+                </p>
+              </div>
+
+              <span className="comparison-count">
+                {comparisonSessions.length} API{" "}
+                {comparisonSessions.length === 1
+                  ? "session"
+                  : "sessions"}
+              </span>
+            </div>
+
+            {comparisonCurrent && comparisonPrevious ? (
+              <>
+                <section className="comparison-session-pair">
+                  <article>
+                    <small>LATEST SESSION</small>
+                    <strong>
+                      {formatTradingDate(
+                        comparisonCurrent.tradingDate,
+                      )}
+                    </strong>
+                    <span>
+                      {comparisonCurrent.source} ·{" "}
+                      {comparisonCurrent.dataFeed} ·{" "}
+                      {comparisonCurrent.status}
+                    </span>
+                    <time>
+                      {formatUpdatedTime(
+                        comparisonCurrent.updatedAt,
+                      )}
+                    </time>
+                  </article>
+
+                  <span
+                    className="comparison-direction"
+                    aria-hidden="true"
+                  >
+                    ←
+                  </span>
+
+                  <article>
+                    <small>PREVIOUS SESSION</small>
+                    <strong>
+                      {formatTradingDate(
+                        comparisonPrevious.tradingDate,
+                      )}
+                    </strong>
+                    <span>
+                      {comparisonPrevious.source} ·{" "}
+                      {comparisonPrevious.dataFeed} ·{" "}
+                      {comparisonPrevious.status}
+                    </span>
+                    <time>
+                      {formatUpdatedTime(
+                        comparisonPrevious.updatedAt,
+                      )}
+                    </time>
+                  </article>
+                </section>
+
+                <section className="comparison-metrics">
+                  <article>
+                    <small>Market-data feed</small>
+                    <strong>
+                      {comparisonPrevious.dataFeed}
+                      <span aria-hidden="true">→</span>
+                      {comparisonCurrent.dataFeed}
+                    </strong>
+                    <p>
+                      {comparisonPrevious.dataFeed ===
+                      comparisonCurrent.dataFeed
+                        ? "No feed change"
+                        : "Feed changed between sessions"}
+                    </p>
+                  </article>
+
+                  <article>
+                    <small>Session status</small>
+                    <strong>
+                      {comparisonPrevious.status}
+                      <span aria-hidden="true">→</span>
+                      {comparisonCurrent.status}
+                    </strong>
+                    <p>
+                      {comparisonPrevious.status ===
+                      comparisonCurrent.status
+                        ? "No status change"
+                        : "Run status changed"}
+                    </p>
+                  </article>
+
+                  <article>
+                    <small>Opening completeness</small>
+                    <strong>
+                      {comparisonPreviousCompleteness.toFixed(1)}
+                      %
+                      <span aria-hidden="true">→</span>
+                      {comparisonCurrentCompleteness.toFixed(1)}
+                      %
+                    </strong>
+                    <p>
+                      {comparisonCurrentBars}/
+                      {comparisonCurrentExpectedBars} latest
+                      opening bars
+                    </p>
+                  </article>
+
+                  <article>
+                    <small>INVEST signals</small>
+                    <strong>
+                      {comparisonPreviousSignals}
+                      <span aria-hidden="true">→</span>
+                      {comparisonCurrentSignals}
+                    </strong>
+                    <p>
+                      {comparisonCurrentSignals -
+                        comparisonPreviousSignals >=
+                      0
+                        ? "+"
+                        : ""}
+                      {comparisonCurrentSignals -
+                        comparisonPreviousSignals}{" "}
+                      from the previous session
+                    </p>
+                  </article>
+
+                  <article>
+                    <small>Data warnings</small>
+                    <strong>
+                      {comparisonPreviousWarnings}
+                      <span aria-hidden="true">→</span>
+                      {comparisonCurrentWarnings}
+                    </strong>
+                    <p>
+                      {comparisonCurrentWarnings -
+                        comparisonPreviousWarnings >=
+                      0
+                        ? "+"
+                        : ""}
+                      {comparisonCurrentWarnings -
+                        comparisonPreviousWarnings}{" "}
+                      from the previous session
+                    </p>
+                  </article>
+
+                  <article>
+                    <small>Decision changes</small>
+                    <strong>{comparisonChanged.length}</strong>
+                    <p>
+                      {comparisonAdded.length} added ·{" "}
+                      {comparisonRemoved.length} removed
+                    </p>
+                  </article>
+                </section>
+
+                <section className="comparison-symbol-summary">
+                  <article className="comparison-added">
+                    <header>
+                      <div>
+                        <small>SYMBOL UNIVERSE</small>
+                        <h3>Added symbols</h3>
+                      </div>
+                      <strong>{comparisonAdded.length}</strong>
+                    </header>
+
+                    {comparisonAdded.length ? (
+                      <div>
+                        {comparisonAdded.map((row) => (
+                          <span key={row.symbol}>
+                            {row.symbol}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>No symbols were added.</p>
+                    )}
+                  </article>
+
+                  <article className="comparison-removed">
+                    <header>
+                      <div>
+                        <small>SYMBOL UNIVERSE</small>
+                        <h3>Removed symbols</h3>
+                      </div>
+                      <strong>{comparisonRemoved.length}</strong>
+                    </header>
+
+                    {comparisonRemoved.length ? (
+                      <div>
+                        {comparisonRemoved.map((row) => (
+                          <span key={row.symbol}>
+                            {row.symbol}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>No symbols were removed.</p>
+                    )}
+                  </article>
+                </section>
+
+                <section className="comparison-decision-panel">
+                  <div className="comparison-panel-heading">
+                    <div>
+                      <span className="panel-kicker">
+                        SYMBOL DECISIONS
+                      </span>
+                      <h3>Signal changes</h3>
+                    </div>
+
+                    <span>
+                      {comparisonChanged.length} changed
+                    </span>
+                  </div>
+
+                  <div
+                    className="comparison-table"
+                    role="table"
+                    aria-label="Symbol decision comparison"
+                  >
+                    <div
+                      className="comparison-row comparison-table-head"
+                      role="row"
+                    >
+                      <span role="columnheader">Symbol</span>
+                      <span role="columnheader">
+                        Previous
+                      </span>
+                      <span role="columnheader">Latest</span>
+                      <span role="columnheader">Change</span>
+                    </div>
+
+                    {comparisonRows.map((row) => (
+                      <div
+                        className="comparison-row"
+                        key={row.symbol}
+                        role="row"
+                      >
+                        <strong role="cell">
+                          {row.symbol}
+                        </strong>
+
+                        <span role="cell">
+                          {row.previousStock ? (
+                            <span
+                              className={`comparison-signal comparison-signal-${row.previousStock.signal
+                                .toLowerCase()
+                                .replaceAll(" ", "-")}`}
+                            >
+                              {row.previousStock.signal}
+                            </span>
+                          ) : (
+                            <span className="comparison-missing">
+                              Not tracked
+                            </span>
+                          )}
+                        </span>
+
+                        <span role="cell">
+                          {row.currentStock ? (
+                            <span
+                              className={`comparison-signal comparison-signal-${row.currentStock.signal
+                                .toLowerCase()
+                                .replaceAll(" ", "-")}`}
+                            >
+                              {row.currentStock.signal}
+                            </span>
+                          ) : (
+                            <span className="comparison-missing">
+                              Not tracked
+                            </span>
+                          )}
+                        </span>
+
+                        <span role="cell">
+                          <span
+                            className={`comparison-change comparison-change-${row.change.toLowerCase()}`}
+                          >
+                            {row.change}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="comparison-note">
+                  <span aria-hidden="true">i</span>
+                  <div>
+                    <strong>
+                      Comparison is descriptive only
+                    </strong>
+                    <p>
+                      Changes show differences between stored
+                      session records. They do not indicate that
+                      an order was sent to a broker.
+                    </p>
+                  </div>
+                </section>
+              </>
+            ) : (
+              <section className="comparison-unavailable">
+                <span aria-hidden="true">↔</span>
+                <div>
+                  <strong>
+                    Two API sessions are required
+                  </strong>
+                  <p>
+                    The dashboard currently has{" "}
+                    {comparisonSessions.length} verified API{" "}
+                    {comparisonSessions.length === 1
+                      ? "session"
+                      : "sessions"}. A comparison will appear after
+                    another stored session is available.
+                  </p>
+                  <small>
+                    Fallback data is intentionally excluded.
+                  </small>
+                </div>
+              </section>
             )}
           </section>
 
