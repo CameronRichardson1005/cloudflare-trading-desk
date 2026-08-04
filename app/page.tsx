@@ -1593,6 +1593,152 @@ export default function Home() {
                   )}
                 </section>
 
+                {selectedStock.strategy ? (
+                  <section className="reason-card strategy-review-card">
+                    <div className="detail-section-title">
+                      <div>
+                        <span className="panel-kicker">
+                          ACTIVE STRATEGY
+                        </span>
+                        <h3>
+                          {selectedStock.strategy.strategyName ===
+                          "FIBONACCI_61_8"
+                            ? "Fibonacci 61.8% retracement"
+                            : selectedStock.strategy.strategyName ??
+                              "Strategy review"}
+                        </h3>
+                      </div>
+
+                      <span className="strategy-paper-badge">
+                        PAPER/PREVIEW — NOT SUBMITTED
+                      </span>
+                    </div>
+
+                    {selectedStock.strategy.strategyStatus ? (
+                      <p className="strategy-status-line">
+                        {selectedStock.strategy.strategyStatus}
+                      </p>
+                    ) : null}
+
+                    <div className="strategy-metric-grid">
+                      <div>
+                        <small>Confirmation time</small>
+                        <strong>
+                          {selectedStock.strategy.confirmationTime ??
+                            "Not confirmed"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <small>61.8% retracement</small>
+                        <strong>
+                          {selectedStock.strategy.retracementPrice !==
+                          undefined
+                            ? money(
+                                selectedStock.strategy.retracementPrice,
+                              )
+                            : "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <small>Reward / risk</small>
+                        <strong>
+                          {selectedStock.strategy.rewardRisk !== undefined
+                            ? `${selectedStock.strategy.rewardRisk.toFixed(
+                                2,
+                              )}×`
+                            : "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <small>Impulse strength</small>
+                        <strong>
+                          {selectedStock.strategy.impulseAtrMultiple !==
+                          undefined
+                            ? `${selectedStock.strategy.impulseAtrMultiple.toFixed(
+                                2,
+                              )} ATR`
+                            : "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <small>Pullback volume</small>
+                        <strong>
+                          {selectedStock.strategy.pullbackVolumeRatio !==
+                          undefined
+                            ? `${selectedStock.strategy.pullbackVolumeRatio.toFixed(
+                                2,
+                              )}×`
+                            : "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <small>Order status</small>
+                        <strong className="negative">
+                          NOT SUBMITTED
+                        </strong>
+                      </div>
+                    </div>
+
+                    {selectedStock.levels ? (
+                      <div className="strategy-level-grid">
+                        <div>
+                          <small>Entry</small>
+                          <strong>
+                            {money(selectedStock.levels.buy)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <small>Target</small>
+                          <strong>
+                            {money(selectedStock.levels.target)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <small>Structural stop</small>
+                          <strong>
+                            {money(selectedStock.levels.stop)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <small>Trading stop</small>
+                          <strong>
+                            {money(selectedStock.levels.tradingStop)}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {selectedStock.strategy.rejectionReason ? (
+                      <div className="strategy-rejection">
+                        <small>Why there is no trade</small>
+                        <strong>
+                          {selectedStock.strategy.rejectionReason
+                            .replaceAll("_", " ")
+                            .toLowerCase()}
+                        </strong>
+
+                        {selectedStock.strategy.detail ? (
+                          <span>
+                            {selectedStock.strategy.detail}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : selectedStock.strategy.detail ? (
+                      <p className="strategy-detail">
+                        {selectedStock.strategy.detail}
+                      </p>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 <section className="risk-card">
                   <div className="detail-section-title">
                     <div>
