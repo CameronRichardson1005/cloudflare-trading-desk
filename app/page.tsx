@@ -250,6 +250,175 @@ function formatUpdatedTime(timestamp: string) {
   }).format(new Date(timestamp));
 }
 
+type RejectionDefinition = {
+  title: string;
+  explanation: string;
+  nextStep: string;
+};
+
+function rejectionDefinition(
+  code?: string | null,
+): RejectionDefinition {
+  const normalized = code?.trim().toUpperCase() ?? "";
+
+  const definitions: Record<string, RejectionDefinition> = {
+    NO_QUALIFYING_UPWARD_IMPULSE: {
+      title: "No qualifying upward impulse",
+      explanation:
+        "The initial upward price move was not large or clear enough to satisfy the Fibonacci strategy's impulse requirement.",
+      nextStep:
+        "Wait for a stronger upward move that meets the configured ATR and structure requirements.",
+    },
+    RETRACEMENT_ZONE_NOT_TOUCHED: {
+      title: "Retracement zone not touched",
+      explanation:
+        "Price did not return to the required Fibonacci retracement area after the upward impulse.",
+      nextStep:
+        "The strategy remains inactive unless price reaches the configured retracement zone.",
+    },
+    REWARD_RISK_BELOW_MINIMUM: {
+      title: "Reward-to-risk below minimum",
+      explanation:
+        "The expected profit available between entry and target was too small compared with the planned loss at the trading stop.",
+      nextStep:
+        "A trade can qualify only when its projected reward-to-risk ratio meets the configured minimum.",
+    },
+    NO_BULLISH_CONFIRMATION: {
+      title: "No bullish confirmation",
+      explanation:
+        "Price reached the setup area, but the required bullish confirmation pattern was not present.",
+      nextStep:
+        "Wait for the configured confirmation signal before treating the setup as valid.",
+    },
+    PULLBACK_VOLUME_TOO_HIGH: {
+      title: "Pullback volume too high",
+      explanation:
+        "Selling volume during the pullback was stronger than the strategy permits.",
+      nextStep:
+        "A healthier retracement should occur with controlled or declining pullback volume.",
+    },
+    OPENING_DATA_INCOMPLETE: {
+      title: "Opening data incomplete",
+      explanation:
+        "One or more required opening bars were unavailable, so the strategy could not evaluate the symbol reliably.",
+      nextStep:
+        "Review the data feed and missing-bar record before relying on this symbol's result.",
+    },
+    ATR_UNAVAILABLE: {
+      title: "ATR unavailable",
+      explanation:
+        "There was not enough valid historical data to calculate the required average true range.",
+      nextStep:
+        "The symbol needs sufficient historical bars before the strategy can evaluate it.",
+    },
+    INVALID_TRADE_LEVELS: {
+      title: "Invalid trade levels",
+      explanation:
+        "The calculated entry, target, or trading-stop levels did not form a valid trade structure.",
+      nextStep:
+        "The setup must produce an entry above the stop and a target with sufficient upside.",
+    },
+    PRICE_ABOVE_ENTRY_LIMIT: {
+      title: "Price above entry limit",
+      explanation:
+        "Price moved beyond the strategy's acceptable entry range before a valid entry could be recorded.",
+      nextStep:
+        "Do not chase the move. Wait for another qualifying setup.",
+    },
+    NO_ENTRY_TRIGGER: {
+      title: "No entry trigger",
+      explanation:
+        "The strategy conditions were evaluated, but price never produced the required entry event.",
+      nextStep:
+        "The setup remains NO INVEST unless the configured entry trigger occurs within the monitoring window.",
+    },
+  };
+
+  if (definitions[normalized]) {
+    return definitions[normalized];
+  }
+
+  const readableTitle = normalized
+    ? normalized
+        .toLowerCase()
+        .replaceAll("_", " ")
+        .replace(/(^|\s)\S/g, (character) =>
+          character.toUpperCase(),
+        )
+    : "Strategy requirements not met";
+
+  return {
+    title: readableTitle,
+    explanation:
+      "The symbol did not satisfy every requirement of the active Fibonacci strategy.",
+    nextStep:
+      "Review the rule checklist to see which measured condition failed.",
+  };
+}
+
+function diagnosisExplanation(stock: DashboardSymbol) {
+  const strategyName =
+    stock.strategy?.strategyName?.toUpperCase() ?? "";
+
+  if (stock.signal === "WARNING") {
+    return (
+      `${stock.symbol} could not receive a dependable strategy decision ` +
+      `because the required market data was incomplete or unavailable. ` +
+      `${stock.barsProcessed} of ${stock.barsExpected} opening bars were received.`
+    );
+  }
+
+  if (stock.signal === "INVEST") {
+    const passedRules =
+      stock.rules
+        ?.filter((rule) => rule.passed)
+        .map((rule) => rule.label) ?? [];
+
+    if (passedRules.length > 0) {
+      return (
+        `${stock.symbol} was selected because it passed the available ` +
+        `strategy checks: ${passedRules.join(", ")}. Complete entry, target, ` +
+        `and protective stop levels were produced.`
+      );
+    }
+
+    if (strategyName.includes("FIBONACCI")) {
+      return (
+        `${stock.symbol} was selected because the strategy identified a valid ` +
+        `upward impulse, a pullback into the 61.8% Fibonacci retracement area, ` +
+        `acceptable pullback volume, bullish confirmation, and sufficient ` +
+        `reward compared with the planned risk.`
+      );
+    }
+
+    return (
+      `${stock.symbol} was selected because it satisfied the active strategy ` +
+      `requirements and produced verified entry, target-sell, structural-stop, ` +
+      `and trading-stop levels.`
+    );
+  }
+
+  const rejection =
+    stock.strategy?.rejectionReason
+      ?.replaceAll("_", " ")
+      .toLowerCase();
+
+  const detail = stock.strategy?.detail;
+
+  if (rejection || detail) {
+    return (
+      `${stock.symbol} was not selected because ` +
+      `${detail || rejection}.`
+    );
+  }
+
+  return (
+    `${stock.symbol} was not selected because one or more requirements of ` +
+    `the active strategy were not satisfied. No order was submitted.`
+  );
+}
+
+
 function Mark() {
   return (
     <div className="brand-mark" aria-hidden="true">
@@ -270,6 +439,7 @@ function Icon({
     | "history"
     | "performance"
     | "audit"
+    | "glossary"
     | "calendar";
   size?: number;
 }) {
@@ -305,6 +475,13 @@ function Icon({
         <path d="M8 8h8M8 12h8M8 16h5" />
       </>
     ),
+    glossary: (
+      <>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" />
+        <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v17h4.5A2.5 2.5 0 0 1 20 22V5.5Z" />
+        <path d="M7 7h2M15 7h2M7 11h2M15 11h2" />
+      </>
+    ),
     calendar: (
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -328,30 +505,92 @@ function Icon({
   );
 }
 
+type MetricIconName =
+  | "complete"
+  | "bars"
+  | "invest"
+  | "warning";
+
+function MetricIcon({
+  name,
+}: {
+  name: MetricIconName;
+}) {
+  const paths = {
+    complete: (
+      <>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="m8.5 12.2 2.2 2.2 4.8-5" />
+      </>
+    ),
+    bars: (
+      <>
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <path d="M9 5v14M15 5v14" />
+      </>
+    ),
+    invest: (
+      <>
+        <path d="M5 17 17 5" />
+        <path d="M10 5h7v7" />
+        <path d="M5 12v5h5" />
+      </>
+    ),
+    warning: (
+      <>
+        <path d="M12 4 21 20H3L12 4Z" />
+        <path d="M12 9v5" />
+        <path d="M12 17.2h.01" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="26"
+      viewBox="0 0 24 24"
+      width="26"
+    >
+      <g
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      >
+        {paths[name]}
+      </g>
+    </svg>
+  );
+}
+
 function Metric({
   label,
   value,
-  tone = "cyan",
-  glyph,
+  tone,
+  icon,
   active = false,
   onClick,
 }: {
   label: string;
   value: string;
-  tone?: "cyan" | "coral";
-  glyph: string;
+  tone: MetricIconName;
+  icon: MetricIconName;
   active?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       aria-pressed={active}
-      className={`metric-card ${tone} ${active ? "active" : ""}`}
+      className={`metric-card metric-${tone} ${
+        active ? "active" : ""
+      }`}
       onClick={onClick}
       type="button"
     >
       <div className="metric-glyph" aria-hidden="true">
-        {glyph}
+        <MetricIcon name={icon} />
       </div>
       <div>
         <strong>{value}</strong>
@@ -547,8 +786,18 @@ export default function Home() {
     "loading",
   );
   const [activeSection, setActiveSection] = useState<
-    "overview" | "symbols" | "history" | "performance" | "replay" | "audit"
-  >("overview");
+    | "today"
+    | "operations"
+    | "overview"
+    | "symbols"
+    | "diagnosis"
+    | "glossary"
+    | "history"
+    | "performance"
+    | "replay"
+    | "audit"
+  >("today");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filter, setFilter] = useState<
     "all" | "complete" | "signals" | "warnings"
   >("signals");
@@ -657,61 +906,22 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [replayStatus, replayStep]);
 
-  useEffect(() => {
-    const sectionIds = [
-      "overview",
-      "symbols",
-      "history",
-      "performance",
-      "replay",
-      "audit",
-    ] as const;
-    const sections = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => section !== null);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleSection = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-        if (visibleSection) {
-          setActiveSection(
-            visibleSection.target.id as
-              | "overview"
-              | "symbols"
-              | "history"
-              | "performance"
-              | "replay"
-              | "audit",
-          );
-        }
-      },
-      {
-        rootMargin: "-18% 0px -62% 0px",
-        threshold: [0, 0.15, 0.5],
-      },
-    );
-
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
-  }, []);
-
   const navigateTo = (
     section:
+      | "today"
+      | "operations"
       | "overview"
       | "symbols"
+      | "diagnosis"
+      | "glossary"
       | "history"
       | "performance"
       | "replay"
       | "audit",
   ) => {
     setActiveSection(section);
-    document.getElementById(section)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    setSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const showSymbolView = (
@@ -719,10 +929,15 @@ export default function Home() {
   ) => {
     setFilter(nextFilter);
     setActiveSection("symbols");
-    document.getElementById("symbols")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    setSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openStockDiagnosis = (symbol: string) => {
+    setSelectedSymbol(symbol);
+    setActiveSection("diagnosis");
+    setSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const startReplay = () => {
@@ -846,6 +1061,25 @@ export default function Home() {
   ).length;
   const completeSymbols = session.symbols.length - warnings;
 
+  const attentionSymbols = session.symbols.filter(
+    (stock) =>
+      stock.signal === "WARNING" ||
+      stock.barsProcessed < stock.barsExpected,
+  );
+
+  const investSymbols = session.symbols.filter(
+    (stock) => stock.signal === "INVEST",
+  );
+
+  const noInvestSymbols = session.symbols.filter(
+    (stock) => stock.signal === "NO INVEST",
+  );
+
+  const sessionComplete =
+    warnings === 0 &&
+    totalBars === expectedBars &&
+    session.symbols.length > 0;
+
   const reliabilitySelected =
     session.symbolReliability?.filter(
       (record) => record.status === "SELECTED",
@@ -877,22 +1111,67 @@ export default function Home() {
 
   return (
     <main className="dashboard-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? "expanded" : "collapsed"}`}>
         <div className="sidebar-top">
-          <Mark />
+          <div className="sidebar-brand-row">
+            <Mark />
+            <button
+              aria-label={sidebarOpen ? "Collapse navigation" : "Expand navigation"}
+              aria-expanded={sidebarOpen}
+              className="sidebar-toggle"
+              data-tooltip={sidebarOpen ? "Collapse navigation" : "Expand navigation"}
+              title={sidebarOpen ? "Collapse navigation" : "Expand navigation"}
+              onClick={() => setSidebarOpen((current) => !current)}
+              type="button"
+            >
+              <span aria-hidden="true">{sidebarOpen ? "‹" : "›"}</span>
+            </button>
+          </div>
           <section className="session-block">
             <p className="eyebrow">Session</p>
             <div className="session-date">
               <Icon name="calendar" />
               <span>{displayDate}</span>
             </div>
-            <div className="safe-pill">◆ READ-ONLY · PAPER MODE</div>
+            <div className="safe-pill">READ-ONLY · PAPER MODE</div>
           </section>
 
           <nav aria-label="Dashboard sections" className="nav-list">
             <button
+              aria-current={activeSection === "today" ? "page" : undefined}
+              className={`nav-item ${
+                activeSection === "today" ? "active" : ""
+              }`}
+              data-tooltip="Today"
+              title="Today"
+              onClick={() => navigateTo("today")}
+              type="button"
+            >
+              <Icon name="calendar" />
+              <span>Today</span>
+            </button>
+
+            <button
+              aria-current={
+                activeSection === "operations" ? "page" : undefined
+              }
+              className={`nav-item ${
+                activeSection === "operations" ? "active" : ""
+              }`}
+              data-tooltip="Operations"
+              title="Operations"
+              onClick={() => navigateTo("operations")}
+              type="button"
+            >
+              <Icon name="audit" />
+              <span>Operations</span>
+            </button>
+
+            <button
               aria-current={activeSection === "overview" ? "page" : undefined}
               className={`nav-item ${activeSection === "overview" ? "active" : ""}`}
+              data-tooltip="Overview"
+              title="Overview"
               onClick={() => navigateTo("overview")}
               type="button"
             >
@@ -902,6 +1181,8 @@ export default function Home() {
             <button
               aria-current={activeSection === "symbols" ? "page" : undefined}
               className={`nav-item ${activeSection === "symbols" ? "active" : ""}`}
+              data-tooltip="Invest signals"
+              title="Invest signals"
               onClick={() => showSymbolView("signals")}
               type="button"
             >
@@ -909,8 +1190,51 @@ export default function Home() {
               <span>Signals</span>
             </button>
             <button
+              aria-current={
+                activeSection === "diagnosis"
+                  ? "page"
+                  : undefined
+              }
+              className={`nav-item ${
+                activeSection === "diagnosis"
+                  ? "active"
+                  : ""
+              }`}
+              data-tooltip="Stock diagnosis"
+              title="Stock diagnosis"
+              onClick={() => {
+                if (!selectedSymbol && session.symbols.length > 0) {
+                  setSelectedSymbol(session.symbols[0].symbol);
+                }
+                navigateTo("diagnosis");
+              }}
+              type="button"
+            >
+              <Icon name="audit" />
+              <span>Stock Diagnosis</span>
+            </button>
+
+            <button
+              aria-current={
+                activeSection === "glossary" ? "page" : undefined
+              }
+              className={`nav-item ${
+                activeSection === "glossary" ? "active" : ""
+              }`}
+              data-tooltip="Strategy glossary"
+              title="Strategy glossary"
+              onClick={() => navigateTo("glossary")}
+              type="button"
+            >
+              <Icon name="glossary" />
+              <span>Strategy Glossary</span>
+            </button>
+
+            <button
               aria-current={activeSection === "history" ? "page" : undefined}
               className={`nav-item ${activeSection === "history" ? "active" : ""}`}
+              data-tooltip="Session history"
+              title="Session history"
               onClick={() => navigateTo("history")}
               type="button"
             >
@@ -922,6 +1246,8 @@ export default function Home() {
                 activeSection === "performance" ? "page" : undefined
               }
               className={`nav-item ${activeSection === "performance" ? "active" : ""}`}
+              data-tooltip="Performance"
+              title="Performance"
               onClick={() => navigateTo("performance")}
               type="button"
             >
@@ -931,6 +1257,8 @@ export default function Home() {
             <button
               aria-current={activeSection === "replay" ? "page" : undefined}
               className={`nav-item ${activeSection === "replay" ? "active" : ""}`}
+              data-tooltip="Replay"
+              title="Replay"
               onClick={() => navigateTo("replay")}
               type="button"
             >
@@ -940,6 +1268,8 @@ export default function Home() {
             <button
               aria-current={activeSection === "audit" ? "page" : undefined}
               className={`nav-item ${activeSection === "audit" ? "active" : ""}`}
+              data-tooltip="Audit log"
+              title="Audit log"
               onClick={() => navigateTo("audit")}
               type="button"
             >
@@ -960,11 +1290,11 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className="workspace" id="overview">
+      <section className={`workspace section-${activeSection}`} id="overview">
         <header className="topbar">
           <div>
-            <p className="mobile-kicker">SESSION COCKPIT</p>
-            <h1>Cameron&apos;s Trading Desk</h1>
+            <p className="mobile-kicker">TRADING OPERATIONS</p>
+            <h1>Cameron Trading Desk</h1>
             <p className="mode-label">READ-ONLY · PAPER MODE</p>
           </div>
           <div className="topbar-actions">
@@ -981,32 +1311,790 @@ export default function Home() {
         </header>
 
         <div className="content">
+          <section className="today-page" aria-label="Today operations">
+            <div className="today-heading">
+              <div>
+                <span className="panel-kicker">TODAY'S OPERATIONS</span>
+                <h2>{displayDate}</h2>
+                <p>
+                  Current paper-trading session health, strategy decisions,
+                  publishing state, and safety controls.
+                </p>
+              </div>
+
+              <span
+                className={`today-session-status ${
+                  sessionComplete
+                    ? "today-session-complete"
+                    : "today-session-incomplete"
+                }`}
+              >
+                {sessionComplete ? "COMPLETE" : "INCOMPLETE"}
+              </span>
+            </div>
+
+            <section className="today-operations-grid">
+              <article className="today-operation-card">
+                <small>Session</small>
+                <strong>
+                  {sessionComplete ? "COMPLETE" : "INCOMPLETE"}
+                </strong>
+                <span>
+                  {sessionComplete
+                    ? "All opening data was available."
+                    : "One or more symbols require attention."}
+                </span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Market-data feed</small>
+                <strong>{session.dataFeed}</strong>
+                <span>Data source used for this session.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Opening data</small>
+                <strong>
+                  {totalBars}/{expectedBars} bars
+                </strong>
+                <span>
+                  {completeSymbols}/{session.symbols.length} complete symbols
+                </span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Active strategy</small>
+                <strong>FIBONACCI 61.8%</strong>
+                <span>Forward paper evaluation only.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>INVEST signals</small>
+                <strong>{signals}</strong>
+                <span>Qualifying strategy decisions.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Data warnings</small>
+                <strong>{warnings}</strong>
+                <span>Incomplete or unreliable symbols.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Dashboard session</small>
+                <strong>
+                  {dataState === "current"
+                    ? "PUBLISHED"
+                    : dataState === "loading"
+                      ? "CHECKING"
+                      : "FALLBACK"}
+                </strong>
+                <span>
+                  {dataState === "current"
+                    ? "Latest stored session loaded."
+                    : dataState === "loading"
+                      ? "Checking the session API."
+                      : "Showing the verified local snapshot."}
+                </span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Webull</small>
+                <strong>PREVIEW ONLY</strong>
+                <span>No broker submission is enabled.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Orders submitted</small>
+                <strong>0</strong>
+                <span>Paper mode · no live orders.</span>
+              </article>
+
+              <article className="today-operation-card">
+                <small>Last updated</small>
+                <strong>{updatedTime}</strong>
+                <span>Latest dashboard session update.</span>
+              </article>
+            </section>
+
+            <section
+              className="today-timeline-panel"
+              aria-label="Session workflow timeline"
+            >
+              <div className="today-timeline-heading">
+                <div>
+                  <span className="panel-kicker">SESSION WORKFLOW</span>
+                  <h3>Run progress</h3>
+                  <p>
+                    Verified stages from market-data collection through
+                    dashboard publishing. Missing stage times are not estimated.
+                  </p>
+                </div>
+
+                <span className="today-timeline-updated">
+                  Updated {updatedTime}
+                </span>
+              </div>
+
+              <div className="today-timeline">
+                <article className="today-timeline-step timeline-complete">
+                  <span className="today-timeline-marker" aria-hidden="true">
+                    ✓
+                  </span>
+
+                  <div>
+                    <small>STAGE 1</small>
+                    <strong>Session received</strong>
+                    <p>
+                      The dashboard loaded a stored or verified session payload.
+                    </p>
+                  </div>
+
+                  <b>COMPLETE</b>
+                </article>
+
+                <article
+                  className={`today-timeline-step ${
+                    totalBars === expectedBars
+                      ? "timeline-complete"
+                      : "timeline-warning"
+                  }`}
+                >
+                  <span className="today-timeline-marker" aria-hidden="true">
+                    {totalBars === expectedBars ? "✓" : "!"}
+                  </span>
+
+                  <div>
+                    <small>STAGE 2</small>
+                    <strong>Opening bars loaded</strong>
+                    <p>
+                      {totalBars}/{expectedBars} required opening bars were
+                      available across {session.symbols.length} symbols.
+                    </p>
+                  </div>
+
+                  <b>
+                    {totalBars === expectedBars ? "COMPLETE" : "WARNING"}
+                  </b>
+                </article>
+
+                <article
+                  className={`today-timeline-step ${
+                    session.symbols.length > 0
+                      ? "timeline-complete"
+                      : "timeline-pending"
+                  }`}
+                >
+                  <span className="today-timeline-marker" aria-hidden="true">
+                    {session.symbols.length > 0 ? "✓" : "…"}
+                  </span>
+
+                  <div>
+                    <small>STAGE 3</small>
+                    <strong>Strategy evaluated</strong>
+                    <p>
+                      {signals} INVEST, {noInvestSymbols.length} NO INVEST,
+                      and {warnings} warning decisions were recorded.
+                    </p>
+                  </div>
+
+                  <b>
+                    {session.symbols.length > 0 ? "COMPLETE" : "PENDING"}
+                  </b>
+                </article>
+
+                <article
+                  className={`today-timeline-step ${
+                    dataState === "current"
+                      ? "timeline-complete"
+                      : dataState === "loading"
+                        ? "timeline-pending"
+                        : "timeline-warning"
+                  }`}
+                >
+                  <span className="today-timeline-marker" aria-hidden="true">
+                    {dataState === "current"
+                      ? "✓"
+                      : dataState === "loading"
+                        ? "…"
+                        : "!"}
+                  </span>
+
+                  <div>
+                    <small>STAGE 4</small>
+                    <strong>Dashboard session published</strong>
+                    <p>
+                      {dataState === "current"
+                        ? "The latest stored session was loaded from the dashboard API."
+                        : dataState === "loading"
+                          ? "The dashboard is still checking for the latest session."
+                          : "The dashboard is displaying its verified fallback snapshot."}
+                    </p>
+                  </div>
+
+                  <b>
+                    {dataState === "current"
+                      ? "PUBLISHED"
+                      : dataState === "loading"
+                        ? "CHECKING"
+                        : "FALLBACK"}
+                  </b>
+                </article>
+
+                <article className="today-timeline-step timeline-locked">
+                  <span className="today-timeline-marker" aria-hidden="true">
+                    ▣
+                  </span>
+
+                  <div>
+                    <small>STAGE 5</small>
+                    <strong>Broker submission</strong>
+                    <p>
+                      Webull remains preview-only. No order was submitted,
+                      cancelled, or replaced.
+                    </p>
+                  </div>
+
+                  <b>DISABLED</b>
+                </article>
+              </div>
+            </section>
+
+            <section className="today-decision-columns">
+              <article className="today-decision-group today-attention-group">
+                <header>
+                  <div>
+                    <span className="today-group-icon" aria-hidden="true">
+                      !
+                    </span>
+                    <div>
+                      <small>REQUIRES ATTENTION</small>
+                      <h3>Data warnings</h3>
+                    </div>
+                  </div>
+                  <strong>{attentionSymbols.length}</strong>
+                </header>
+
+                {attentionSymbols.length ? (
+                  <div className="today-symbol-list">
+                    {attentionSymbols.map((stock) => (
+                      <button
+                        className="today-symbol-row"
+                        key={stock.symbol}
+                        onClick={() =>
+                          openStockDiagnosis(stock.symbol)
+                        }
+                        type="button"
+                      >
+                        <span>
+                          <strong>{stock.symbol}</strong>
+                          <small>
+                            {stock.barsProcessed}/
+                            {stock.barsExpected} opening bars
+                          </small>
+                        </span>
+                        <b>Review diagnosis →</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="today-empty-state">
+                    <strong>No data warnings</strong>
+                    <p>Every tracked symbol has complete opening data.</p>
+                  </div>
+                )}
+              </article>
+
+              <article className="today-decision-group today-invest-group">
+                <header>
+                  <div>
+                    <span className="today-group-icon" aria-hidden="true">
+                      ✓
+                    </span>
+                    <div>
+                      <small>QUALIFYING DECISIONS</small>
+                      <h3>INVEST signals</h3>
+                    </div>
+                  </div>
+                  <strong>{investSymbols.length}</strong>
+                </header>
+
+                {investSymbols.length ? (
+                  <div className="today-symbol-list">
+                    {investSymbols.map((stock) => (
+                      <button
+                        className="today-symbol-row"
+                        key={stock.symbol}
+                        onClick={() =>
+                          openStockDiagnosis(stock.symbol)
+                        }
+                        type="button"
+                      >
+                        <span>
+                          <strong>{stock.symbol}</strong>
+                          <small>
+                            Qualified under the active strategy
+                          </small>
+                        </span>
+                        <b>Open diagnosis →</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="today-empty-state">
+                    <strong>No qualifying signals today</strong>
+                    <p>
+                      No stock satisfied every required strategy rule.
+                    </p>
+                  </div>
+                )}
+              </article>
+
+              <article className="today-decision-group today-rejected-group">
+                <header>
+                  <div>
+                    <span className="today-group-icon" aria-hidden="true">
+                      ×
+                    </span>
+                    <div>
+                      <small>STRATEGY REJECTIONS</small>
+                      <h3>NO INVEST decisions</h3>
+                    </div>
+                  </div>
+                  <strong>{noInvestSymbols.length}</strong>
+                </header>
+
+                {noInvestSymbols.length ? (
+                  <div className="today-symbol-list">
+                    {noInvestSymbols.map((stock) => (
+                      <button
+                        className="today-symbol-row"
+                        key={stock.symbol}
+                        onClick={() =>
+                          openStockDiagnosis(stock.symbol)
+                        }
+                        type="button"
+                      >
+                        <span>
+                          <strong>{stock.symbol}</strong>
+                          <small>
+                            {
+                              rejectionDefinition(
+                                stock.strategy?.rejectionReason,
+                              ).title
+                            }
+                          </small>
+                        </span>
+                        <b>Open diagnosis →</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="today-empty-state">
+                    <strong>No rejected symbols</strong>
+                    <p>
+                      No complete symbol was rejected by the strategy.
+                    </p>
+                  </div>
+                )}
+              </article>
+            </section>
+
+            <section className="today-safety-note">
+              <span aria-hidden="true">▣</span>
+              <div>
+                <strong>Paper-trading safety remains active</strong>
+                <p>
+                  Dashboard information is read-only. Webull is preview-only,
+                  and this interface cannot submit, cancel, or replace orders.
+                </p>
+              </div>
+            </section>
+          </section>
+
+          <section
+            className="glossary-page"
+            aria-label="Fibonacci strategy glossary"
+          >
+            <div className="glossary-heading">
+              <div>
+                <span className="panel-kicker">STRATEGY REFERENCE</span>
+                <h2>Fibonacci rejection glossary</h2>
+                <p>
+                  Plain-language definitions for the strategy codes shown
+                  throughout Today, Signals, and Stock Diagnosis.
+                </p>
+              </div>
+
+              <span className="glossary-strategy-badge">
+                FIBONACCI 61.8%
+              </span>
+            </div>
+
+            <section className="glossary-introduction">
+              <span aria-hidden="true">i</span>
+              <div>
+                <strong>How to use this page</strong>
+                <p>
+                  A rejection code explains why a symbol did not qualify.
+                  It does not indicate that an order was submitted. All
+                  dashboard results remain paper-only and read-only.
+                </p>
+              </div>
+            </section>
+
+            <div className="glossary-grid">
+              {[
+                "NO_QUALIFYING_UPWARD_IMPULSE",
+                "RETRACEMENT_ZONE_NOT_TOUCHED",
+                "REWARD_RISK_BELOW_MINIMUM",
+                "NO_BULLISH_CONFIRMATION",
+                "PULLBACK_VOLUME_TOO_HIGH",
+                "OPENING_DATA_INCOMPLETE",
+                "ATR_UNAVAILABLE",
+                "INVALID_TRADE_LEVELS",
+                "PRICE_ABOVE_ENTRY_LIMIT",
+                "NO_ENTRY_TRIGGER",
+              ].map((code) => {
+                const definition = rejectionDefinition(code);
+
+                return (
+                  <article className="glossary-card" key={code}>
+                    <div className="glossary-card-header">
+                      <span className="glossary-code">{code}</span>
+                      <span
+                        className="glossary-rejected-badge"
+                        aria-label="No invest condition"
+                      >
+                        NO INVEST
+                      </span>
+                    </div>
+
+                    <h3>{definition.title}</h3>
+
+                    <div className="glossary-section">
+                      <small>WHAT IT MEANS</small>
+                      <p>{definition.explanation}</p>
+                    </div>
+
+                    <div className="glossary-section glossary-pass-condition">
+                      <small>WHAT WOULD NEED TO CHANGE</small>
+                      <p>{definition.nextStep}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <section className="glossary-footer-note">
+              <span aria-hidden="true">▣</span>
+              <div>
+                <strong>Strategy definitions only</strong>
+                <p>
+                  These explanations describe the active strategy logic.
+                  They are not investment advice and do not represent
+                  submitted broker orders.
+                </p>
+              </div>
+            </section>
+          </section>
+
+          <section
+            className="operations-page"
+            aria-label="Trading system operations"
+          >
+            <div className="operations-heading">
+              <div>
+                <span className="panel-kicker">SYSTEM OPERATIONS</span>
+                <h2>Run health and workflow</h2>
+                <p>
+                  Technical status for data collection, strategy evaluation,
+                  dashboard publishing, and broker safety controls.
+                </p>
+              </div>
+
+              <span
+                className={`operations-status ${
+                  sessionComplete
+                    ? "operations-status-complete"
+                    : "operations-status-warning"
+                }`}
+              >
+                {sessionComplete ? "HEALTHY" : "WARNING"}
+              </span>
+            </div>
+
+            <section className="operations-status-grid">
+              <article className="operations-status-card">
+                <small>Run mode</small>
+                <strong>
+                  {session.productionHealth?.runMode ?? "PAPER"}
+                </strong>
+                <span>Current execution mode.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Workflow</small>
+                <strong>
+                  {session.productionHealth?.workflowStatus ??
+                    (sessionComplete ? "COMPLETE" : "INCOMPLETE")}
+                </strong>
+                <span>Overall processing state.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Market-data feed</small>
+                <strong>{session.dataFeed}</strong>
+                <span>Feed used for this session.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Opening data</small>
+                <strong>
+                  {totalBars}/{expectedBars}
+                </strong>
+                <span>
+                  {completeSymbols}/{session.symbols.length} complete symbols
+                </span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Dashboard publish</small>
+                <strong>
+                  {dataState === "current"
+                    ? "PUBLISHED"
+                    : dataState === "loading"
+                      ? "CHECKING"
+                      : "FALLBACK"}
+                </strong>
+                <span>Stored-session availability.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Active strategy</small>
+                <strong>FIBONACCI 61.8%</strong>
+                <span>Forward paper strategy.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Webull</small>
+                <strong>PREVIEW ONLY</strong>
+                <span>Broker submission remains disabled.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Orders submitted</small>
+                <strong>0</strong>
+                <span>No live or paper broker orders submitted.</span>
+              </article>
+
+              <article className="operations-status-card">
+                <small>Last updated</small>
+                <strong>{updatedTime}</strong>
+                <span>Latest dashboard session update.</span>
+              </article>
+            </section>
+
+            <section
+              className="operations-timeline-panel"
+              aria-label="Session workflow timeline"
+            >
+              <div className="operations-timeline-heading">
+                <div>
+                  <span className="panel-kicker">SESSION WORKFLOW</span>
+                  <h3>Run progress</h3>
+                  <p>
+                    Verified stages from session loading through dashboard
+                    publishing. Missing timestamps are not estimated.
+                  </p>
+                </div>
+
+                <span>Updated {updatedTime}</span>
+              </div>
+
+              <div className="operations-timeline">
+                <article className="operations-step operations-step-complete">
+                  <span className="operations-step-icon" aria-hidden="true">
+                    ✓
+                  </span>
+
+                  <div>
+                    <small>STAGE 1</small>
+                    <strong>Session received</strong>
+                    <p>
+                      A stored or verified dashboard session was loaded.
+                    </p>
+                  </div>
+
+                  <b>COMPLETE</b>
+                </article>
+
+                <article
+                  className={`operations-step ${
+                    totalBars === expectedBars
+                      ? "operations-step-complete"
+                      : "operations-step-warning"
+                  }`}
+                >
+                  <span className="operations-step-icon" aria-hidden="true">
+                    {totalBars === expectedBars ? "✓" : "!"}
+                  </span>
+
+                  <div>
+                    <small>STAGE 2</small>
+                    <strong>Opening data collected</strong>
+                    <p>
+                      {totalBars} of {expectedBars} required opening bars were
+                      available.
+                    </p>
+                  </div>
+
+                  <b>
+                    {totalBars === expectedBars ? "COMPLETE" : "WARNING"}
+                  </b>
+                </article>
+
+                <article className="operations-step operations-step-complete">
+                  <span className="operations-step-icon" aria-hidden="true">
+                    ✓
+                  </span>
+
+                  <div>
+                    <small>STAGE 3</small>
+                    <strong>Strategy evaluated</strong>
+                    <p>
+                      {signals} INVEST, {noInvestSymbols.length} NO INVEST,
+                      and {warnings} warning decisions were recorded.
+                    </p>
+                  </div>
+
+                  <b>COMPLETE</b>
+                </article>
+
+                <article
+                  className={`operations-step ${
+                    dataState === "current"
+                      ? "operations-step-complete"
+                      : dataState === "loading"
+                        ? "operations-step-pending"
+                        : "operations-step-warning"
+                  }`}
+                >
+                  <span className="operations-step-icon" aria-hidden="true">
+                    {dataState === "current"
+                      ? "✓"
+                      : dataState === "loading"
+                        ? "…"
+                        : "!"}
+                  </span>
+
+                  <div>
+                    <small>STAGE 4</small>
+                    <strong>Dashboard session published</strong>
+                    <p>
+                      {dataState === "current"
+                        ? "The latest stored session was loaded from the API."
+                        : dataState === "loading"
+                          ? "The dashboard is checking for the latest session."
+                          : "The verified local fallback snapshot is being shown."}
+                    </p>
+                  </div>
+
+                  <b>
+                    {dataState === "current"
+                      ? "PUBLISHED"
+                      : dataState === "loading"
+                        ? "CHECKING"
+                        : "FALLBACK"}
+                  </b>
+                </article>
+
+                <article className="operations-step operations-step-locked">
+                  <span className="operations-step-icon" aria-hidden="true">
+                    ▣
+                  </span>
+
+                  <div>
+                    <small>STAGE 5</small>
+                    <strong>Broker submission</strong>
+                    <p>
+                      Webull is preview-only. No order was submitted,
+                      cancelled, or replaced.
+                    </p>
+                  </div>
+
+                  <b>DISABLED</b>
+                </article>
+              </div>
+            </section>
+
+            <section className="operations-safety">
+              <span aria-hidden="true">▣</span>
+              <div>
+                <strong>Execution safety confirmed</strong>
+                <p>
+                  This dashboard is read-only. It cannot place, cancel, or
+                  replace broker orders.
+                </p>
+              </div>
+            </section>
+          </section>
+
+          <section className="overview-intro">
+            <div>
+              <span className="panel-kicker">SESSION ANALYSIS</span>
+              <h2>Strategy overview</h2>
+              <p>
+                Detailed Fibonacci strategy evaluation, symbol decisions,
+                order plans, reliability checks, and session analysis.
+              </p>
+            </div>
+
+            <div className="overview-intro-facts">
+              <span>
+                <small>Symbols analyzed</small>
+                <strong>{session.symbols.length}</strong>
+              </span>
+              <span>
+                <small>INVEST decisions</small>
+                <strong>{signals}</strong>
+              </span>
+              <span>
+                <small>Strategy</small>
+                <strong>FIBONACCI 61.8%</strong>
+              </span>
+            </div>
+          </section>
+
           <section className="status-strip" aria-label="Replay summary">
             <Metric
-              glyph="◎"
+              icon="complete"
+              tone="complete"
               label="Complete symbols"
               value={`${completeSymbols}/${session.symbols.length}`}
               active={filter === "complete"}
               onClick={() => showSymbolView("complete")}
             />
             <Metric
-              glyph="◫"
+              icon="bars"
+              tone="bars"
               label="Bars loaded"
               value={`${totalBars}/${expectedBars}`}
               active={filter === "all"}
               onClick={() => showSymbolView("all")}
             />
             <Metric
-              glyph="↗"
+              icon="invest"
+              tone="invest"
               label="INVEST signals"
               value={String(signals)}
               active={filter === "signals"}
               onClick={() => showSymbolView("signals")}
             />
             <Metric
-              glyph="!"
+              icon="warning"
+              tone="warning"
               label="Data warning"
-              tone="coral"
               value={String(warnings)}
               active={filter === "warnings"}
               onClick={() => showSymbolView("warnings")}
@@ -1309,7 +2397,7 @@ export default function Home() {
                   <span role="columnheader">Symbol</span>
                   <span role="columnheader">Signal</span>
                   <span role="columnheader">Outcome</span>
-                  <span role="columnheader">Order plan</span>
+                  <span role="columnheader">Buy / target sell / stop</span>
                   <span role="columnheader">Data quality</span>
                 </div>
 
@@ -1362,7 +2450,7 @@ export default function Home() {
                       }`}
                       key={stock.symbol}
                       onClick={() =>
-                        setSelectedSymbol(stock.symbol)
+                        openStockDiagnosis(stock.symbol)
                       }
                       role="row"
                       type="button"
@@ -1413,24 +2501,22 @@ export default function Home() {
                               <i>Limit price per share</i>
                             </span>
 
-                            <span className="order-plan-levels">
-                              <span>
-                                Target{" "}
-                                <b>
-                                  {money(
-                                    stock.levels.target,
-                                  )}
-                                </b>
-                              </span>
-                              <span>
-                                Stop{" "}
-                                <b>
-                                  {money(
-                                    stock.levels
-                                      .tradingStop,
-                                  )}
-                                </b>
-                              </span>
+                            <span className="order-plan-target">
+                              <small>Target sell</small>
+                              <strong>
+                                {money(stock.levels.target)}
+                              </strong>
+                              <i>Limit sell price per share</i>
+                            </span>
+
+                            <span className="order-plan-stop">
+                              <small>Stop loss</small>
+                              <strong>
+                                {money(
+                                  stock.levels.tradingStop,
+                                )}
+                              </strong>
+                              <i>Trading stop per share</i>
                             </span>
                           </>
                         ) : (
@@ -2008,6 +3094,483 @@ export default function Home() {
               </section>
             </section>
           ) : null}
+
+          <section
+            className="panel diagnosis-panel"
+            id="stock-diagnosis"
+          >
+            <div className="panel-heading diagnosis-heading">
+              <div>
+                <span className="panel-kicker">
+                  DECISION EXPLANATION
+                </span>
+                <h2>Stock Diagnosis</h2>
+                <p>
+                  Select a stock to see exactly why it was or
+                  was not chosen by the active strategy.
+                </p>
+              </div>
+
+              <div className="diagnosis-stock-picker">
+                <label htmlFor="diagnosis-symbol">
+                  Stock
+                </label>
+                <select
+                  id="diagnosis-symbol"
+                  onChange={(event) =>
+                    setSelectedSymbol(event.target.value)
+                  }
+                  value={
+                    selectedStock?.symbol ??
+                    session.symbols[0]?.symbol ??
+                    ""
+                  }
+                >
+                  {session.symbols.map((stock) => (
+                    <option
+                      key={stock.symbol}
+                      value={stock.symbol}
+                    >
+                      {stock.symbol} — {stock.signal}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedStock ? (
+              <div className="diagnosis-content">
+                {selectedStock.barsProcessed <
+                selectedStock.barsExpected ||
+                selectedStock.signal === "WARNING" ? (
+                  <section className="diagnosis-data-warning">
+                    <div
+                      className="diagnosis-data-warning-icon"
+                      aria-hidden="true"
+                    >
+                      !
+                    </div>
+
+                    <div>
+                      <span>DATA QUALITY WARNING</span>
+                      <strong>
+                        {selectedStock.barsProcessed} of{" "}
+                        {selectedStock.barsExpected} opening bars
+                        were available
+                      </strong>
+                      <p>
+                        This symbol was not treated as fully
+                        reliable. A data warning is separate from
+                        failing a trading-strategy rule.
+                      </p>
+                    </div>
+                  </section>
+                ) : (
+                  <section className="diagnosis-data-complete">
+                    <span aria-hidden="true">✓</span>
+                    <div>
+                      <strong>Opening data complete</strong>
+                      <small>
+                        {selectedStock.barsProcessed}/
+                        {selectedStock.barsExpected} opening bars
+                        were available for evaluation.
+                      </small>
+                    </div>
+                  </section>
+                )}
+
+                <section
+                  className={`diagnosis-decision ${
+                    selectedStock.signal === "INVEST"
+                      ? "decision-invest"
+                      : selectedStock.signal === "WARNING"
+                        ? "decision-warning"
+                        : "decision-no-invest"
+                  }`}
+                >
+                  <div>
+                    <span>Strategy decision</span>
+                    <h3>{selectedStock.symbol}</h3>
+                  </div>
+
+                  <strong>{selectedStock.signal}</strong>
+
+                  <p>
+                    {diagnosisExplanation(selectedStock)}
+                  </p>
+                </section>
+
+                <div className="diagnosis-grid">
+                  <section className="diagnosis-card">
+                    <span className="panel-kicker">
+                      DECISION REASON
+                    </span>
+                    <h3>
+                      Why {selectedStock.signal === "INVEST"
+                        ? "it qualified"
+                        : "it did not qualify"}
+                    </h3>
+
+                    <div className="diagnosis-general-explanation">
+                      <strong>General explanation</strong>
+                      <p>
+                        {diagnosisExplanation(selectedStock)}
+                      </p>
+                    </div>
+
+                    {selectedStock.strategy
+                      ?.rejectionReason ? (
+                      <div className="diagnosis-rejection">
+                        <span className="diagnosis-rejection-code">
+                          {
+                            selectedStock.strategy
+                              .rejectionReason
+                          }
+                        </span>
+
+                        <strong>
+                          {
+                            rejectionDefinition(
+                              selectedStock.strategy
+                                .rejectionReason,
+                            ).title
+                          }
+                        </strong>
+
+                        <p>
+                          {selectedStock.strategy.detail ||
+                            rejectionDefinition(
+                              selectedStock.strategy
+                                .rejectionReason,
+                            ).explanation}
+                        </p>
+
+                        <div className="diagnosis-next-step">
+                          <small>WHAT WOULD NEED TO CHANGE</small>
+                          <span>
+                            {
+                              rejectionDefinition(
+                                selectedStock.strategy
+                                  .rejectionReason,
+                              ).nextStep
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="diagnosis-rule-audit">
+                      <div className="diagnosis-rule-audit-heading">
+                        <div>
+                          <span className="panel-kicker">
+                            RULE AUDIT
+                          </span>
+                          <h4>Strategy checklist</h4>
+                        </div>
+
+                        <strong>
+                          {selectedStock.rules?.filter(
+                            (rule) => rule.passed,
+                          ).length ?? 0}
+                          /
+                          {selectedStock.rules?.length ?? 0} passed
+                        </strong>
+                      </div>
+
+                      {selectedStock.rules?.length ? (
+                        <div className="diagnosis-rule-list">
+                          {selectedStock.rules.map((rule) => (
+                            <article
+                              className={`diagnosis-rule ${
+                                rule.passed
+                                  ? "diagnosis-rule-pass"
+                                  : "diagnosis-rule-fail"
+                              }`}
+                              key={rule.label}
+                            >
+                              <div
+                                className="diagnosis-rule-result"
+                                aria-hidden="true"
+                              >
+                                {rule.passed ? "✓" : "×"}
+                              </div>
+
+                              <div className="diagnosis-rule-copy">
+                                <strong>{rule.label}</strong>
+
+                                <dl>
+                                  <div>
+                                    <dt>Actual</dt>
+                                    <dd>{rule.actual}</dd>
+                                  </div>
+
+                                  <div>
+                                    <dt>Required</dt>
+                                    <dd>{rule.requirement}</dd>
+                                  </div>
+                                </dl>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="diagnosis-rule-unavailable">
+                          <strong>Rule audit unavailable</strong>
+                          <p>
+                            This stored session did not include the
+                            rule-by-rule strategy evaluation. The
+                            dashboard will not estimate or fabricate
+                            missing rule results.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="diagnosis-card">
+                    <span className="panel-kicker">
+                      SESSION INFORMATION
+                    </span>
+                    <h3>Data quality</h3>
+
+                    <dl className="diagnosis-facts">
+                      <div>
+                        <dt>Trading date</dt>
+                        <dd>{session.tradingDate}</dd>
+                      </div>
+                      <div>
+                        <dt>Market-data feed</dt>
+                        <dd>{session.dataFeed}</dd>
+                      </div>
+                      <div>
+                        <dt>Opening bars</dt>
+                        <dd>
+                          {selectedStock.barsProcessed}/
+                          {selectedStock.barsExpected}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Data status</dt>
+                        <dd>{selectedStock.detail}</dd>
+                      </div>
+                      <div>
+                        <dt>Strategy</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.strategyName ?? "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Submitted</dt>
+                        <dd className="diagnosis-not-submitted">
+                          NO
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="diagnosis-card diagnosis-card-wide">
+                    <span className="panel-kicker">
+                      STRATEGY MEASUREMENTS
+                    </span>
+                    <h3>Opening range and Fibonacci data</h3>
+
+                    <dl className="diagnosis-metrics">
+                      <div>
+                        <dt>ATR</dt>
+                        <dd>
+                          {selectedStock.strategy?.atr !==
+                          undefined
+                            ? money(
+                                selectedStock.strategy.atr,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Opening open</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.openingOpen !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .openingOpen,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Opening high</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.openingHigh !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .openingHigh,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Opening low</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.openingLow !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .openingLow,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Opening close</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.openingClose !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .openingClose,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Candle range</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.candleRange !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .candleRange,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Retracement price</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.retracementPrice !== undefined
+                            ? money(
+                                selectedStock.strategy
+                                  .retracementPrice,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Impulse ATR multiple</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.impulseAtrMultiple !==
+                          undefined
+                            ? `${selectedStock.strategy.impulseAtrMultiple.toFixed(
+                                3,
+                              )}×`
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Pullback volume ratio</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.pullbackVolumeRatio !==
+                          undefined
+                            ? selectedStock.strategy.pullbackVolumeRatio.toFixed(
+                                3,
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Confirmation time</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.confirmationTime || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Reward / risk</dt>
+                        <dd>
+                          {selectedStock.strategy
+                            ?.rewardRisk !== undefined
+                            ? `${selectedStock.strategy.rewardRisk.toFixed(
+                                2,
+                              )}×`
+                            : "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="diagnosis-card diagnosis-card-wide">
+                    <span className="panel-kicker">
+                      TRADE INSTRUCTIONS
+                    </span>
+                    <h3>Entry, target and protection</h3>
+
+                    {selectedStock.levels ? (
+                      <div className="diagnosis-levels">
+                        <div>
+                          <span>Entry</span>
+                          <strong>
+                            {money(selectedStock.levels.buy)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Target sell</span>
+                          <strong>
+                            {money(
+                              selectedStock.levels.target,
+                            )}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Structural stop</span>
+                          <strong>
+                            {money(
+                              selectedStock.levels.stop,
+                            )}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>Trading stop loss</span>
+                          <strong>
+                            {money(
+                              selectedStock.levels
+                                .tradingStop,
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="diagnosis-no-order">
+                        <strong>No trade instructions</strong>
+                        <span>
+                          Entry, target and stop prices are
+                          only produced for qualifying INVEST
+                          signals.
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="diagnosis-safety">
+                      READ-ONLY · PAPER MODE · NOT SUBMITTED
+                    </div>
+                  </section>
+                </div>
+              </div>
+            ) : (
+              <div className="detail-empty">
+                <strong>No stock selected</strong>
+                <span>
+                  Choose a stock from the selector or click a
+                  stock in the Signals table.
+                </span>
+              </div>
+            )}
+          </section>
 
           <section className="panel history-panel" id="history">
             <div className="panel-heading">
