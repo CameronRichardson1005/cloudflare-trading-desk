@@ -49,6 +49,23 @@ type DashboardSymbol = {
     returnPct?: number;
     detail?: string;
   };
+  webullPreview?: {
+    status: string;
+    submitted: false;
+    quantity?: number;
+    limitBuy?: number;
+    target?: number;
+    tradingStopLoss?: number;
+    riskPerShare?: number;
+    plannedRisk?: number;
+    estimatedPositionValue?: number;
+    maxPositionValue?: number;
+    sizingConstraint?: string;
+    estimatedCost?: number;
+    estimatedTransactionFee?: number;
+    currency?: string;
+    error?: string;
+  };
 };
 
 type SymbolReliability = {
@@ -1554,6 +1571,79 @@ export default function Home() {
                         Uses the original trading stop loss as risk per share.
                         This calculator cannot place an order.
                       </p>
+
+                      {selectedStock.webullPreview ? (
+                        <div className="webull-preview-cap">
+                          <div className="webull-preview-cap-heading">
+                            <span>
+                              WEBULL PREVIEW · NOT SUBMITTED
+                            </span>
+                            <strong>
+                              {selectedStock.webullPreview.status}
+                            </strong>
+                          </div>
+
+                          <div className="webull-preview-cap-grid">
+                            <div>
+                              <small>Preview quantity</small>
+                              <strong>
+                                {selectedStock.webullPreview.quantity ??
+                                  "—"}
+                              </strong>
+                            </div>
+                            <div>
+                              <small>Position value</small>
+                              <strong>
+                                {selectedStock.webullPreview
+                                  .estimatedPositionValue !==
+                                undefined
+                                  ? money(
+                                      selectedStock.webullPreview
+                                        .estimatedPositionValue,
+                                    )
+                                  : "—"}
+                              </strong>
+                            </div>
+                            <div>
+                              <small>Maximum position value</small>
+                              <strong>
+                                {selectedStock.webullPreview
+                                  .maxPositionValue !== undefined
+                                  ? money(
+                                      selectedStock.webullPreview
+                                        .maxPositionValue,
+                                    )
+                                  : "—"}
+                              </strong>
+                            </div>
+                            <div>
+                              <small>Sizing constraint</small>
+                              <strong>
+                                {selectedStock.webullPreview
+                                  .sizingConstraint ?? "—"}
+                              </strong>
+                            </div>
+                            <div>
+                              <small>Planned risk</small>
+                              <strong>
+                                {selectedStock.webullPreview
+                                  .plannedRisk !== undefined
+                                  ? money(
+                                      selectedStock.webullPreview
+                                        .plannedRisk,
+                                    )
+                                  : "—"}
+                              </strong>
+                            </div>
+                            <div>
+                              <small>Submitted</small>
+                              <strong className="negative">
+                                NO
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </>
                   ) : (
                     <div className="detail-empty compact">

@@ -64,6 +64,24 @@ export type TradeOutcome = {
   detail?: string;
 };
 
+export type WebullPreview = {
+  status: string;
+  submitted: false;
+  quantity?: number;
+  limitBuy?: number;
+  target?: number;
+  tradingStopLoss?: number;
+  riskPerShare?: number;
+  plannedRisk?: number;
+  estimatedPositionValue?: number;
+  maxPositionValue?: number;
+  sizingConstraint?: string;
+  estimatedCost?: number;
+  estimatedTransactionFee?: number;
+  currency?: string;
+  error?: string;
+};
+
 export type SessionSymbol = {
   symbol: string;
   signal: "INVEST" | "NO INVEST" | "WARNING";
@@ -75,6 +93,7 @@ export type SessionSymbol = {
   strategy?: StrategySnapshot;
   minuteBars?: MinuteBar[];
   outcome?: TradeOutcome;
+  webullPreview?: WebullPreview;
 };
 
 export type SymbolReliabilityStatus =

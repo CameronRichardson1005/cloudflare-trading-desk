@@ -2046,3 +2046,69 @@ a {
     font-size: 7px;
   }
 }
+
+/* Webull preview position-value safety cap */
+.webull-preview-cap {
+  background: rgba(6, 19, 42, 0.8);
+  border: 1px solid rgba(84, 229, 154, 0.34);
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.webull-preview-cap-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.webull-preview-cap-heading span {
+  color: var(--green);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.webull-preview-cap-heading strong {
+  color: var(--muted-bright);
+  font-size: 9px;
+}
+
+.webull-preview-cap-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 11px;
+}
+
+.webull-preview-cap-grid > div {
+  background: rgba(13, 31, 65, 0.58);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 9px;
+}
+
+.webull-preview-cap-grid small,
+.webull-preview-cap-grid strong {
+  display: block;
+}
+
+.webull-preview-cap-grid small {
+  color: var(--muted);
+  font-size: 7px;
+  text-transform: uppercase;
+}
+
+.webull-preview-cap-grid strong {
+  color: var(--cyan-soft);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .webull-preview-cap-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -80,6 +80,68 @@ function validateOutcome(value: unknown) {
   );
 }
 
+function validateWebullPreview(value: unknown) {
+  if (value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+
+  const preview = value as Record<string, unknown>;
+
+  const validQuantity =
+    preview.quantity === undefined ||
+    (
+      Number.isInteger(preview.quantity) &&
+      Number(preview.quantity) > 0
+    );
+
+  const validSizingConstraint =
+    preview.sizingConstraint === undefined ||
+    (
+      typeof preview.sizingConstraint === "string" &&
+      /^(RISK_BUDGET|MAX_SHARES|POSITION_VALUE)(\+(RISK_BUDGET|MAX_SHARES|POSITION_VALUE))*$/.test(
+        preview.sizingConstraint,
+      )
+    );
+
+  const positionValueWithinCap =
+    preview.estimatedPositionValue === undefined ||
+    preview.maxPositionValue === undefined ||
+    (
+      validNumber(preview.estimatedPositionValue) &&
+      validNumber(preview.maxPositionValue) &&
+      preview.estimatedPositionValue <=
+        preview.maxPositionValue + 0.01
+    );
+
+  return (
+    typeof preview.status === "string" &&
+    preview.submitted === false &&
+    validQuantity &&
+    validOptionalNumber(preview.limitBuy) &&
+    validOptionalNumber(preview.target) &&
+    validOptionalNumber(preview.tradingStopLoss) &&
+    validOptionalNumber(preview.riskPerShare) &&
+    validOptionalNumber(preview.plannedRisk) &&
+    validOptionalNumber(
+      preview.estimatedPositionValue,
+    ) &&
+    validOptionalNumber(preview.maxPositionValue) &&
+    validSizingConstraint &&
+    validOptionalNumber(preview.estimatedCost) &&
+    validOptionalNumber(
+      preview.estimatedTransactionFee,
+    ) &&
+    (
+      preview.currency === undefined ||
+      typeof preview.currency === "string"
+    ) &&
+    (
+      preview.error === undefined ||
+      typeof preview.error === "string"
+    ) &&
+    positionValueWithinCap
+  );
+}
+
 function validateSymbolReliability(value: unknown) {
   if (!value || typeof value !== "object") return false;
 
@@ -136,7 +198,8 @@ function validateSymbol(value: unknown): value is SessionSymbol {
     validRules &&
     validMinuteBars &&
     validateStrategy(symbol.strategy) &&
-    validateOutcome(symbol.outcome)
+    validateOutcome(symbol.outcome) &&
+    validateWebullPreview(symbol.webullPreview)
   );
 }
 
