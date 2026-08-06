@@ -1,0 +1,109 @@
+{
+  "id": "live_fibonacci-2026-08-06",
+  "tradingDate": "2026-08-06",
+  "source": "LIVE_FIBONACCI",
+  "dataFeed": "IEX",
+  "status": "COMPLETE",
+  "updatedAt": "2026-08-06T18:39:16Z",
+  "symbols": [
+    {
+      "symbol": "OPEN",
+      "signal": "INVEST",
+      "barsProcessed": 15,
+      "barsExpected": 15,
+      "detail": "complete",
+      "levels": {
+        "buy": 4.25,
+        "target": 4.6,
+        "stop": 4.1,
+        "tradingStop": 4.1
+      },
+      "rules": [
+        {
+          "label": "61.8% retracement setup",
+          "passed": true,
+          "actual": "$4.1800",
+          "requirement": "Price touches the 61.8% Fibonacci retracement"
+        },
+        {
+          "label": "Impulse strength",
+          "passed": true,
+          "actual": "0.720 ATR",
+          "requirement": "At least 0.50 ATR"
+        },
+        {
+          "label": "Pullback volume",
+          "passed": true,
+          "actual": "0.640",
+          "requirement": "Ratio below 1.0"
+        },
+        {
+          "label": "Reward / risk",
+          "passed": true,
+          "actual": "2.33",
+          "requirement": "At least 1.50"
+        },
+        {
+          "label": "Bullish confirmation",
+          "passed": true,
+          "actual": "10:08",
+          "requirement": "Bullish confirmation candle within the permitted confirmation window"
+        }
+      ],
+      "strategy": {
+        "strategyName": "FIBONACCI_61_8",
+        "strategyStatus": "ACTIVE PAPER/PREVIEW \u2014 NOT SUBMITTED",
+        "detail": "Fibonacci preview fixture.",
+        "rejectionReason": "",
+        "atr": 0.25,
+        "openingOpen": 4.4,
+        "openingHigh": 4.5,
+        "openingLow": 4.1,
+        "openingClose": 4.3,
+        "rewardRisk": 2.33,
+        "retracementPrice": 4.18,
+        "impulseAtrMultiple": 0.72,
+        "pullbackVolumeRatio": 0.64,
+        "confirmationTime": "10:08",
+        "isManipulation": false,
+        "isRed": false
+      },
+      "webullPreview": {
+        "status": "PREVIEW READY",
+        "submitted": false,
+        "quantity": 10,
+        "limitBuy": 4.25,
+        "target": 4.6,
+        "tradingStopLoss": 4.1,
+        "riskPerShare": 0.15,
+        "plannedRisk": 1.5,
+        "estimatedPositionValue": 42.5,
+        "maxPositionValue": 77.72,
+        "sizingConstraint": "POSITION_VALUE",
+        "currency": "USD"
+      }
+    }
+  ],
+  "productionHealth": {
+    "runMode": "MANUAL",
+    "workflowStatus": "COMPLETED",
+    "marketDay": true,
+    "dataStatus": "HEALTHY"
+  },
+  "webullApprovals": [
+    {
+      "symbol": "OPEN",
+      "quantity": 10,
+      "limitPrice": 4.25,
+      "proposedExposure": 42.5,
+      "status": "PENDING",
+      "createdAt": "2026-08-06T18:30:00Z",
+      "expiresAt": "2026-08-06T18:35:00Z"
+    }
+  ],
+  "webullSafety": {
+    "manualApprovalRequired": true,
+    "killSwitchActive": true,
+    "submissionEnabled": false
+  }
+}
