@@ -124,6 +124,28 @@ type FibonacciPaperStatus = {
   } | null;
 };
 
+type WebullApprovalSummary = {
+  symbol: string;
+  quantity: number;
+  limitPrice: number;
+  proposedExposure: number;
+  status:
+    | "PENDING"
+    | "APPROVED"
+    | "EXPIRED"
+    | "CONSUMED";
+  createdAt: string;
+  expiresAt: string;
+  approvedAt?: string;
+  consumedAt?: string;
+};
+
+type WebullSafetyStatus = {
+  manualApprovalRequired: true;
+  killSwitchActive: true;
+  submissionEnabled: false;
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -139,6 +161,8 @@ type DashboardSession = {
   symbols: DashboardSymbol[];
   symbolReliability?: SymbolReliability[];
   productionHealth?: ProductionHealth;
+  webullApprovals?: WebullApprovalSummary[];
+  webullSafety?: WebullSafetyStatus;
 };
 
 const fallbackSession: DashboardSession = {
@@ -242,6 +266,18 @@ function formatTradingDate(date: string) {
 
 function formatUpdatedTime(timestamp: string) {
   return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  }).format(new Date(timestamp));
+}
+
+function formatApprovalTime(timestamp: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -1160,6 +1196,16 @@ export default function Home() {
   });
   const selectedStock =
     session.symbols.find((stock) => stock.symbol === selectedSymbol) ?? null;
+
+  const selectedApproval =
+    selectedStock
+      ? session.webullApprovals?.find(
+          (approval) =>
+            approval.symbol === selectedStock.symbol,
+        ) ?? null
+      : null;
+
+  const webullSafety = session.webullSafety ?? null;
   const riskBudget = accountSize * (riskPercent / 100);
   const riskPerShare =
     selectedStock?.levels
@@ -3542,6 +3588,137 @@ export default function Home() {
                               </strong>
                             </div>
                           </div>
+                        </div>
+                      ) : null}
+
+
+                      {selectedApproval && webullSafety ? (
+                        <div className="webull-preview-cap">
+                          <div className="webull-preview-cap-heading">
+                            <span>
+                              WEBULL APPROVAL STATUS · READ ONLY
+                            </span>
+                            <strong>
+                              {selectedApproval.status}
+                            </strong>
+                          </div>
+
+                          <div className="webull-preview-cap-grid">
+                            <div>
+                              <small>Symbol</small>
+                              <strong>
+                                {selectedApproval.symbol}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Approved quantity</small>
+                              <strong>
+                                {selectedApproval.quantity}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Limit price</small>
+                              <strong>
+                                {money(
+                                  selectedApproval.limitPrice,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Proposed exposure</small>
+                              <strong>
+                                {money(
+                                  selectedApproval
+                                    .proposedExposure,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Created</small>
+                              <strong>
+                                {formatApprovalTime(
+                                  selectedApproval.createdAt,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Expires</small>
+                              <strong>
+                                {formatApprovalTime(
+                                  selectedApproval.expiresAt,
+                                )}
+                              </strong>
+                            </div>
+
+                            {selectedApproval.approvedAt ? (
+                              <div>
+                                <small>Approved</small>
+                                <strong>
+                                  {formatApprovalTime(
+                                    selectedApproval.approvedAt,
+                                  )}
+                                </strong>
+                              </div>
+                            ) : null}
+
+                            {selectedApproval.consumedAt ? (
+                              <div>
+                                <small>Consumed</small>
+                                <strong>
+                                  {formatApprovalTime(
+                                    selectedApproval.consumedAt,
+                                  )}
+                                </strong>
+                              </div>
+                            ) : null}
+
+                            <div>
+                              <small>Manual approval</small>
+                              <strong>
+                                {webullSafety
+                                  .manualApprovalRequired
+                                  ? "REQUIRED"
+                                  : "NOT REQUIRED"}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Trading kill switch</small>
+                              <strong className="negative">
+                                {webullSafety.killSwitchActive
+                                  ? "ACTIVE"
+                                  : "INACTIVE"}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Order submission</small>
+                              <strong className="negative">
+                                {webullSafety.submissionEnabled
+                                  ? "ENABLED"
+                                  : "DISABLED"}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <small>Dashboard controls</small>
+                              <strong className="negative">
+                                READ ONLY
+                              </strong>
+                            </div>
+                          </div>
+
+                          <p className="risk-note">
+                            This panel displays a redacted local
+                            approval record. It cannot approve,
+                            submit, modify, replace, or cancel a
+                            Webull order.
+                          </p>
                         </div>
                       ) : null}
                     </>
