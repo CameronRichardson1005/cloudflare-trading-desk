@@ -7,6 +7,10 @@ import {
 } from "../../../../db/sessions";
 import { getDashboardRuntimeEnv } from "../../../../db/runtime-env";
 import { suppressUnsafeLevels } from "../../../../db/session-safety";
+import {
+  validateWebullApprovals,
+  validateWebullSafety,
+} from "../../../../db/webull-approval-safety";
 
 export const dynamic = "force-dynamic";
 
@@ -265,6 +269,12 @@ function validateSession(value: unknown): value is TradingSession {
     session.symbols.every(validateSymbol) &&
     validateProductionHealth(
       session.productionHealth,
+    ) &&
+    validateWebullApprovals(
+      session.webullApprovals,
+    ) &&
+    validateWebullSafety(
+      session.webullSafety,
     ) &&
     (
       session.symbolReliability === undefined ||

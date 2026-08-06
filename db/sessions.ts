@@ -91,6 +91,30 @@ export type WebullPreview = {
   error?: string;
 };
 
+export type WebullApprovalStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "EXPIRED"
+  | "CONSUMED";
+
+export type WebullApprovalSummary = {
+  symbol: string;
+  quantity: number;
+  limitPrice: number;
+  proposedExposure: number;
+  status: WebullApprovalStatus;
+  createdAt: string;
+  expiresAt: string;
+  approvedAt?: string;
+  consumedAt?: string;
+};
+
+export type WebullSafetyStatus = {
+  manualApprovalRequired: true;
+  killSwitchActive: true;
+  submissionEnabled: false;
+};
+
 export type SessionSymbol = {
   symbol: string;
   signal: "INVEST" | "NO INVEST" | "WARNING";
@@ -142,6 +166,8 @@ export type TradingSession = {
   symbols: SessionSymbol[];
   symbolReliability?: SymbolReliability[];
   productionHealth?: ProductionHealth;
+  webullApprovals?: WebullApprovalSummary[];
+  webullSafety?: WebullSafetyStatus;
 };
 
 function database(): D1Database {

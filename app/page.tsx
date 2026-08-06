@@ -1783,7 +1783,7 @@ export default function Home() {
           <section className="today-page" aria-label="Today operations">
             <div className="today-heading">
               <div>
-                <span className="panel-kicker">TODAY'S OPERATIONS</span>
+                <span className="panel-kicker">TODAY&apos;S OPERATIONS</span>
                 <h2>{displayDate}</h2>
                 <p>
                   Current paper-trading session health, strategy decisions,
