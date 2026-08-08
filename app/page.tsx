@@ -146,6 +146,40 @@ type WebullSafetyStatus = {
   submissionEnabled: false;
 };
 
+type PaperPerformance = {
+  date: string;
+  ordersApproved: number;
+  tradesEntered: number;
+  openTrades: number;
+  closedTrades: number;
+  noEntry: number;
+  targetExits: number;
+  stopExits: number;
+  timeExits: number;
+  profitableTrades: number;
+  losingTrades: number;
+  breakevenTrades: number;
+  winRatePct: number | null;
+  realizedPnl: number;
+  averagePnlPerTrade: number | null;
+  averageReturnPct: number | null;
+  averageWinner: number | null;
+  averageLoser: number | null;
+  expectancyPerTrade: number | null;
+  averageMfePct: number | null;
+  averageMaePct: number | null;
+  bestTrade: {
+    symbol: string | null;
+    pnl: number | null;
+  };
+  worstTrade: {
+    symbol: string | null;
+    pnl: number | null;
+  };
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -163,6 +197,7 @@ type DashboardSession = {
   productionHealth?: ProductionHealth;
   webullApprovals?: WebullApprovalSummary[];
   webullSafety?: WebullSafetyStatus;
+  paperPerformance?: PaperPerformance;
 };
 
 const fallbackSession: DashboardSession = {
@@ -2728,6 +2763,206 @@ export default function Home() {
                   <b>{updatedTime}</b>
                 </span>
               </div>
+            </section>
+          ) : null}
+
+          {session.paperPerformance ? (
+            <section
+              className="panel fibonacci-paper-panel"
+              aria-label="Local paper trading performance"
+            >
+              <div className="panel-heading">
+                <div>
+                  <span className="panel-kicker">
+                    LOCAL PAPER PERFORMANCE
+                  </span>
+                  <h2>Today’s simulated trade results</h2>
+                </div>
+                <span className="fibonacci-safety">
+                  SIMULATION ONLY · NOT BROKER SUBMITTED
+                </span>
+              </div>
+
+              <div className="fibonacci-summary">
+                <div>
+                  <small>Realized P&amp;L</small>
+                  <strong
+                    className={
+                      session.paperPerformance.realizedPnl > 0
+                        ? "positive"
+                        : session.paperPerformance.realizedPnl < 0
+                          ? "negative"
+                          : ""
+                    }
+                  >
+                    {session.paperPerformance.realizedPnl >= 0
+                      ? "+"
+                      : ""}
+                    {money(
+                      session.paperPerformance.realizedPnl,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Win rate</small>
+                  <strong>
+                    {session.paperPerformance.winRatePct === null
+                      ? "—"
+                      : `${session.paperPerformance.winRatePct.toFixed(
+                          2,
+                        )}%`}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Entered / approved</small>
+                  <strong>
+                    {session.paperPerformance.tradesEntered} /{" "}
+                    {session.paperPerformance.ordersApproved}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Closed / open</small>
+                  <strong>
+                    {session.paperPerformance.closedTrades} /{" "}
+                    {session.paperPerformance.openTrades}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>No entry</small>
+                  <strong>
+                    {session.paperPerformance.noEntry}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Target / stop / time</small>
+                  <strong>
+                    {session.paperPerformance.targetExits} /{" "}
+                    {session.paperPerformance.stopExits} /{" "}
+                    {session.paperPerformance.timeExits}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Wins / losses</small>
+                  <strong>
+                    {session.paperPerformance.profitableTrades} /{" "}
+                    {session.paperPerformance.losingTrades}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Average P&amp;L</small>
+                  <strong>
+                    {session.paperPerformance.averagePnlPerTrade ===
+                    null
+                      ? "—"
+                      : money(
+                          session.paperPerformance
+                            .averagePnlPerTrade,
+                        )}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Average return</small>
+                  <strong>
+                    {session.paperPerformance.averageReturnPct ===
+                    null
+                      ? "—"
+                      : `${
+                          session.paperPerformance
+                            .averageReturnPct >= 0
+                            ? "+"
+                            : ""
+                        }${session.paperPerformance.averageReturnPct.toFixed(
+                          4,
+                        )}%`}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Expectancy / trade</small>
+                  <strong>
+                    {session.paperPerformance.expectancyPerTrade ===
+                    null
+                      ? "—"
+                      : money(
+                          session.paperPerformance
+                            .expectancyPerTrade,
+                        )}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Average MFE</small>
+                  <strong>
+                    {session.paperPerformance.averageMfePct === null
+                      ? "—"
+                      : `+${session.paperPerformance.averageMfePct.toFixed(
+                          4,
+                        )}%`}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Average MAE</small>
+                  <strong>
+                    {session.paperPerformance.averageMaePct === null
+                      ? "—"
+                      : `${session.paperPerformance.averageMaePct.toFixed(
+                          4,
+                        )}%`}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="fibonacci-latest">
+                <div>
+                  <small>BEST TRADE</small>
+                  <strong>
+                    {session.paperPerformance.bestTrade.symbol
+                      ? `${
+                          session.paperPerformance.bestTrade.symbol
+                        } · ${
+                          session.paperPerformance.bestTrade.pnl !==
+                          null
+                            ? money(
+                                session.paperPerformance.bestTrade.pnl,
+                              )
+                            : "—"
+                        }`
+                      : "None"}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>WORST TRADE</small>
+                  <strong>
+                    {session.paperPerformance.worstTrade.symbol
+                      ? `${
+                          session.paperPerformance.worstTrade.symbol
+                        } · ${
+                          session.paperPerformance.worstTrade.pnl !==
+                          null
+                            ? money(
+                                session.paperPerformance.worstTrade.pnl,
+                              )
+                            : "—"
+                        }`
+                      : "None"}
+                  </strong>
+                </div>
+              </div>
+
+              <p className="fibonacci-footnote">
+                These figures come from the local simulated Webull
+                paper ledger. No Webull broker order was submitted.
+              </p>
             </section>
           ) : null}
 

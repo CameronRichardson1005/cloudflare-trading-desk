@@ -151,6 +151,40 @@ export type ProductionHealth = {
   dataStatus: "HEALTHY" | "WARNING";
 };
 
+export type PaperPerformance = {
+  date: string;
+  ordersApproved: number;
+  tradesEntered: number;
+  openTrades: number;
+  closedTrades: number;
+  noEntry: number;
+  targetExits: number;
+  stopExits: number;
+  timeExits: number;
+  profitableTrades: number;
+  losingTrades: number;
+  breakevenTrades: number;
+  winRatePct: number | null;
+  realizedPnl: number;
+  averagePnlPerTrade: number | null;
+  averageReturnPct: number | null;
+  averageWinner: number | null;
+  averageLoser: number | null;
+  expectancyPerTrade: number | null;
+  averageMfePct: number | null;
+  averageMaePct: number | null;
+  bestTrade: {
+    symbol: string | null;
+    pnl: number | null;
+  };
+  worstTrade: {
+    symbol: string | null;
+    pnl: number | null;
+  };
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 export type TradingSession = {
   id: string;
   tradingDate: string;
@@ -168,6 +202,7 @@ export type TradingSession = {
   productionHealth?: ProductionHealth;
   webullApprovals?: WebullApprovalSummary[];
   webullSafety?: WebullSafetyStatus;
+paperPerformance?: PaperPerformance;
 };
 
 function database(): D1Database {

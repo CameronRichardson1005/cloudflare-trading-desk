@@ -11,6 +11,9 @@ import {
   validateWebullApprovals,
   validateWebullSafety,
 } from "../../../../db/webull-approval-safety";
+import {
+  validatePaperPerformance,
+} from "../../../../db/paper-performance-safety";
 
 export const dynamic = "force-dynamic";
 
@@ -269,6 +272,9 @@ function validateSession(value: unknown): value is TradingSession {
     session.symbols.every(validateSymbol) &&
     validateProductionHealth(
       session.productionHealth,
+    ) &&
+    validatePaperPerformance(
+      session.paperPerformance,
     ) &&
     validateWebullApprovals(
       session.webullApprovals,
