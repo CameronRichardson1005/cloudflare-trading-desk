@@ -1,0 +1,127 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  validatePaperPortfolio,
+} from "../db/paper-portfolio-safety.ts";
+
+function portfolio(overrides = {}) {
+  return {
+    startingCash: 10000,
+    cash: 9965,
+    buyingPower: 9965,
+    openCostBasis: 40,
+    marketValue: 42,
+    realizedPnl: 5,
+    unrealizedPnl: 2,
+    totalPnl: 7,
+    equity: 10007,
+    openPositionCount: 1,
+    closedPositionCount: 1,
+    pendingOrderCount: 0,
+    noEntryCount: 0,
+    overdrawn: false,
+    openPositions: [
+      {
+        paperOrderId: "paper-open",
+        symbol: "BBAI",
+        quantity: 10,
+        fillPrice: 4,
+        costBasis: 40,
+        markPrice: 4.2,
+        markStatus: "MARKED",
+        marketValue: 42,
+        unrealizedPnl: 2,
+        unrealizedReturnPct: 5,
+        filledAt: "2026-08-07T14:01:00Z",
+        targetPrice: 4.5,
+        stopPrice: 3.8,
+      },
+    ],
+    closedPositions: [
+      {
+        paperOrderId: "paper-closed",
+        symbol: "OPEN",
+        quantity: 10,
+        fillPrice: 4,
+        exitPrice: 4.5,
+        realizedPnl: 5,
+        returnPct: 12.5,
+        exitReason: "TARGET",
+        filledAt: "2026-08-07T14:00:00Z",
+        closedAt: "2026-08-07T14:05:00Z",
+      },
+    ],
+    simulationOnly: true,
+    brokerSubmitted: false,
+    ...overrides,
+  };
+}
+
+test("accepts valid simulated portfolio", () => {
+  assert.equal(
+    validatePaperPortfolio(portfolio()),
+    true,
+  );
+});
+
+test("allows missing portfolio for legacy sessions", () => {
+  assert.equal(
+    validatePaperPortfolio(undefined),
+    true,
+  );
+});
+
+test("rejects broker submitted claim", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ brokerSubmitted: true }),
+    ),
+    false,
+  );
+});
+
+test("rejects non-simulation portfolio", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ simulationOnly: false }),
+    ),
+    false,
+  );
+});
+
+test("rejects inconsistent total pnl", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ totalPnl: 999 }),
+    ),
+    false,
+  );
+});
+
+test("rejects inconsistent equity", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ equity: 999 }),
+    ),
+    false,
+  );
+});
+
+test("rejects incorrect open position count", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ openPositionCount: 2 }),
+    ),
+    false,
+  );
+});
+
+test("rejects negative buying power", () => {
+  assert.equal(
+    validatePaperPortfolio(
+      portfolio({ buyingPower: -1 }),
+    ),
+    false,
+  );
+});

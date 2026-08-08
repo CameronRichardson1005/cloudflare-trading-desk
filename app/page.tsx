@@ -180,6 +180,56 @@ type PaperPerformance = {
   brokerSubmitted: false;
 };
 
+type PaperPortfolioOpenPosition = {
+  paperOrderId: string;
+  symbol: string;
+  quantity: number;
+  fillPrice: number;
+  costBasis: number;
+  markPrice: number;
+  markStatus: "MARKED" | "FILL FALLBACK";
+  marketValue: number;
+  unrealizedPnl: number;
+  unrealizedReturnPct: number;
+  filledAt: string;
+  targetPrice: number | null;
+  stopPrice: number | null;
+};
+
+type PaperPortfolioClosedPosition = {
+  paperOrderId: string;
+  symbol: string;
+  quantity: number;
+  fillPrice: number;
+  exitPrice: number;
+  realizedPnl: number;
+  returnPct: number;
+  exitReason: string;
+  filledAt: string;
+  closedAt: string;
+};
+
+type PaperPortfolio = {
+  startingCash: number;
+  cash: number;
+  buyingPower: number;
+  openCostBasis: number;
+  marketValue: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  totalPnl: number;
+  equity: number;
+  openPositionCount: number;
+  closedPositionCount: number;
+  pendingOrderCount: number;
+  noEntryCount: number;
+  overdrawn: boolean;
+  openPositions: PaperPortfolioOpenPosition[];
+  closedPositions: PaperPortfolioClosedPosition[];
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 type DashboardSession = {
   id: string;
   tradingDate: string;
@@ -198,6 +248,7 @@ type DashboardSession = {
   webullApprovals?: WebullApprovalSummary[];
   webullSafety?: WebullSafetyStatus;
   paperPerformance?: PaperPerformance;
+  paperPortfolio?: PaperPortfolio;
 };
 
 const fallbackSession: DashboardSession = {
@@ -2763,6 +2814,166 @@ export default function Home() {
                   <b>{updatedTime}</b>
                 </span>
               </div>
+            </section>
+          ) : null}
+
+          {session.paperPortfolio ? (
+            <section
+              className="panel fibonacci-paper-panel"
+              aria-label="Simulated paper account"
+            >
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">
+                    SIMULATED ACCOUNT
+                  </p>
+                  <h2>
+                    Local paper portfolio
+                  </h2>
+                </div>
+                <div className="fibonacci-safety">
+                  SIMULATION ONLY · NOT BROKER SUBMITTED
+                </div>
+              </div>
+
+              <div className="fibonacci-summary">
+                <div>
+                  <span>Equity</span>
+                  <strong>
+                    {money(session.paperPortfolio.equity)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Cash</span>
+                  <strong>
+                    {money(session.paperPortfolio.cash)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Buying power</span>
+                  <strong>
+                    {money(
+                      session.paperPortfolio.buyingPower,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Total P&amp;L</span>
+                  <strong
+                    className={
+                      session.paperPortfolio.totalPnl > 0
+                        ? "positive"
+                        : session.paperPortfolio.totalPnl < 0
+                          ? "negative"
+                          : undefined
+                    }
+                  >
+                    {session.paperPortfolio.totalPnl >= 0
+                      ? "+"
+                      : ""}
+                    {money(
+                      session.paperPortfolio.totalPnl,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Realized P&amp;L</span>
+                  <strong>
+                    {money(
+                      session.paperPortfolio.realizedPnl,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Unrealized P&amp;L</span>
+                  <strong>
+                    {money(
+                      session.paperPortfolio.unrealizedPnl,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Market value</span>
+                  <strong>
+                    {money(
+                      session.paperPortfolio.marketValue,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Open cost basis</span>
+                  <strong>
+                    {money(
+                      session.paperPortfolio.openCostBasis,
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Open / closed</span>
+                  <strong>
+                    {session.paperPortfolio.openPositionCount}
+                    {" / "}
+                    {session.paperPortfolio.closedPositionCount}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Pending / no entry</span>
+                  <strong>
+                    {session.paperPortfolio.pendingOrderCount}
+                    {" / "}
+                    {session.paperPortfolio.noEntryCount}
+                  </strong>
+                </div>
+              </div>
+
+              {session.paperPortfolio.openPositions.length > 0 ? (
+                <div className="fibonacci-latest">
+                  <strong>Open simulated positions</strong>
+
+                  {session.paperPortfolio.openPositions.map(
+                    (position) => (
+                      <div key={position.paperOrderId}>
+                        <span>
+                          {position.symbol} ·{" "}
+                          {position.quantity} shares
+                        </span>
+                        <span>
+                          Entry {money(position.fillPrice)}
+                          {" · "}Mark{" "}
+                          {money(position.markPrice)}
+                          {" · "}
+                          {position.unrealizedPnl >= 0
+                            ? "+"
+                            : ""}
+                          {money(position.unrealizedPnl)}
+                        </span>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <div className="fibonacci-latest">
+                  <strong>
+                    No open simulated positions
+                  </strong>
+                </div>
+              )}
+
+              <p className="fibonacci-footnote">
+                Portfolio values are reconstructed from the
+                local Webull paper ledger and completed market
+                bars. They are not Webull broker balances,
+                positions, buying power, or submitted orders.
+              </p>
             </section>
           ) : null}
 

@@ -185,6 +185,56 @@ export type PaperPerformance = {
   brokerSubmitted: false;
 };
 
+export type PaperPortfolioOpenPosition = {
+  paperOrderId: string;
+  symbol: string;
+  quantity: number;
+  fillPrice: number;
+  costBasis: number;
+  markPrice: number;
+  markStatus: "MARKED" | "FILL FALLBACK";
+  marketValue: number;
+  unrealizedPnl: number;
+  unrealizedReturnPct: number;
+  filledAt: string;
+  targetPrice: number | null;
+  stopPrice: number | null;
+};
+
+export type PaperPortfolioClosedPosition = {
+  paperOrderId: string;
+  symbol: string;
+  quantity: number;
+  fillPrice: number;
+  exitPrice: number;
+  realizedPnl: number;
+  returnPct: number;
+  exitReason: string;
+  filledAt: string;
+  closedAt: string;
+};
+
+export type PaperPortfolio = {
+  startingCash: number;
+  cash: number;
+  buyingPower: number;
+  openCostBasis: number;
+  marketValue: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  totalPnl: number;
+  equity: number;
+  openPositionCount: number;
+  closedPositionCount: number;
+  pendingOrderCount: number;
+  noEntryCount: number;
+  overdrawn: boolean;
+  openPositions: PaperPortfolioOpenPosition[];
+  closedPositions: PaperPortfolioClosedPosition[];
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 export type TradingSession = {
   id: string;
   tradingDate: string;
@@ -202,7 +252,8 @@ export type TradingSession = {
   productionHealth?: ProductionHealth;
   webullApprovals?: WebullApprovalSummary[];
   webullSafety?: WebullSafetyStatus;
-paperPerformance?: PaperPerformance;
+  paperPerformance?: PaperPerformance;
+  paperPortfolio?: PaperPortfolio;
 };
 
 function database(): D1Database {

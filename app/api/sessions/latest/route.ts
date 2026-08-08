@@ -14,6 +14,9 @@ import {
 import {
   validatePaperPerformance,
 } from "../../../../db/paper-performance-safety";
+import {
+  validatePaperPortfolio,
+} from "../../../../db/paper-portfolio-safety";
 
 export const dynamic = "force-dynamic";
 
@@ -275,6 +278,9 @@ function validateSession(value: unknown): value is TradingSession {
     ) &&
     validatePaperPerformance(
       session.paperPerformance,
+    ) &&
+    validatePaperPortfolio(
+      session.paperPortfolio,
     ) &&
     validateWebullApprovals(
       session.webullApprovals,
