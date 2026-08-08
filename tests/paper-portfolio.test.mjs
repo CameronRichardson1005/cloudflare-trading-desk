@@ -125,3 +125,108 @@ test("rejects negative buying power", () => {
     false,
   );
 });
+
+
+test("accepts valid paper portfolio risk status", async () => {
+  const { validatePaperPortfolio } = await import(
+    "../db/paper-portfolio-safety.ts"
+  );
+
+  const candidate = portfolio();
+
+  candidate.risk = {
+    tradingAllowed: true,
+    reason: "PAPER_TRADING_ALLOWED",
+    availableForNewOrders: 9850,
+    pendingReservedCash: 100,
+    dailyRealizedPnl: -10,
+    maxDailyLoss: 50,
+    remainingDailyLoss: 40,
+    simulationOnly: true,
+    brokerSubmitted: false,
+  };
+
+  assert.equal(validatePaperPortfolio(candidate), true);
+});
+
+
+test("accepts missing legacy paper risk status", async () => {
+  const { validatePaperPortfolio } = await import(
+    "../db/paper-portfolio-safety.ts"
+  );
+
+  const candidate = portfolio();
+
+  delete candidate.risk;
+
+  assert.equal(validatePaperPortfolio(candidate), true);
+});
+
+
+test("rejects broker-submitted paper risk status", async () => {
+  const { validatePaperPortfolio } = await import(
+    "../db/paper-portfolio-safety.ts"
+  );
+
+  const candidate = portfolio();
+
+  candidate.risk = {
+    tradingAllowed: true,
+    reason: "PAPER_TRADING_ALLOWED",
+    availableForNewOrders: 9850,
+    pendingReservedCash: 100,
+    dailyRealizedPnl: -10,
+    maxDailyLoss: 50,
+    remainingDailyLoss: 40,
+    simulationOnly: true,
+    brokerSubmitted: true,
+  };
+
+  assert.equal(validatePaperPortfolio(candidate), false);
+});
+
+
+test("rejects inconsistent daily-loss halt state", async () => {
+  const { validatePaperPortfolio } = await import(
+    "../db/paper-portfolio-safety.ts"
+  );
+
+  const candidate = portfolio();
+
+  candidate.risk = {
+    tradingAllowed: true,
+    reason: "PAPER_DAILY_LOSS_LIMIT_REACHED",
+    availableForNewOrders: 9850,
+    pendingReservedCash: 0,
+    dailyRealizedPnl: -50,
+    maxDailyLoss: 50,
+    remainingDailyLoss: 0,
+    simulationOnly: true,
+    brokerSubmitted: false,
+  };
+
+  assert.equal(validatePaperPortfolio(candidate), false);
+});
+
+
+test("rejects remaining loss above configured limit", async () => {
+  const { validatePaperPortfolio } = await import(
+    "../db/paper-portfolio-safety.ts"
+  );
+
+  const candidate = portfolio();
+
+  candidate.risk = {
+    tradingAllowed: true,
+    reason: "PAPER_TRADING_ALLOWED",
+    availableForNewOrders: 9850,
+    pendingReservedCash: 0,
+    dailyRealizedPnl: 10,
+    maxDailyLoss: 50,
+    remainingDailyLoss: 60,
+    simulationOnly: true,
+    brokerSubmitted: false,
+  };
+
+  assert.equal(validatePaperPortfolio(candidate), false);
+});

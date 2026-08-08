@@ -214,6 +214,18 @@ export type PaperPortfolioClosedPosition = {
   closedAt: string;
 };
 
+export type PaperPortfolioRisk = {
+  tradingAllowed: boolean;
+  reason: string;
+  availableForNewOrders: number;
+  pendingReservedCash: number;
+  dailyRealizedPnl: number;
+  maxDailyLoss: number;
+  remainingDailyLoss: number;
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 export type PaperPortfolio = {
   startingCash: number;
   cash: number;
@@ -229,6 +241,7 @@ export type PaperPortfolio = {
   pendingOrderCount: number;
   noEntryCount: number;
   overdrawn: boolean;
+  risk?: PaperPortfolioRisk | null;
   openPositions: PaperPortfolioOpenPosition[];
   closedPositions: PaperPortfolioClosedPosition[];
   simulationOnly: true;

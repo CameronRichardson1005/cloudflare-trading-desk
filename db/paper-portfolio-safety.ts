@@ -83,6 +83,59 @@ function validateClosedPosition(value: unknown): boolean {
   );
 }
 
+function validatePaperPortfolioRisk(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (!value || typeof value !== "object") return false;
+
+  const risk = value as Record<string, unknown>;
+
+  if (
+    typeof risk.tradingAllowed !== "boolean" ||
+    typeof risk.reason !== "string" ||
+    risk.reason.length === 0 ||
+    !nonNegativeNumber(risk.availableForNewOrders) ||
+    !nonNegativeNumber(risk.pendingReservedCash) ||
+    !validNumber(risk.dailyRealizedPnl) ||
+    !nonNegativeNumber(risk.maxDailyLoss) ||
+    Number(risk.maxDailyLoss) <= 0 ||
+    !nonNegativeNumber(risk.remainingDailyLoss) ||
+    risk.simulationOnly !== true ||
+    risk.brokerSubmitted !== false
+  ) {
+    return false;
+  }
+
+  if (
+    Number(risk.remainingDailyLoss) >
+    Number(risk.maxDailyLoss) + 0.01
+  ) {
+    return false;
+  }
+
+  if (
+    risk.reason === "PAPER_DAILY_LOSS_LIMIT_REACHED" &&
+    risk.tradingAllowed !== false
+  ) {
+    return false;
+  }
+
+  if (
+    risk.reason === "PAPER_NO_AVAILABLE_CASH" &&
+    risk.tradingAllowed !== false
+  ) {
+    return false;
+  }
+
+  if (
+    risk.reason === "PAPER_TRADING_ALLOWED" &&
+    risk.tradingAllowed !== true
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export function validatePaperPortfolio(
   value: unknown,
 ): boolean {
@@ -107,6 +160,7 @@ export function validatePaperPortfolio(
     !nonNegativeInteger(portfolio.pendingOrderCount) ||
     !nonNegativeInteger(portfolio.noEntryCount) ||
     typeof portfolio.overdrawn !== "boolean" ||
+    !validatePaperPortfolioRisk(portfolio.risk) ||
     portfolio.simulationOnly !== true ||
     portfolio.brokerSubmitted !== false ||
     !Array.isArray(portfolio.openPositions) ||

@@ -209,6 +209,18 @@ type PaperPortfolioClosedPosition = {
   closedAt: string;
 };
 
+type PaperPortfolioRisk = {
+  tradingAllowed: boolean;
+  reason: string;
+  availableForNewOrders: number;
+  pendingReservedCash: number;
+  dailyRealizedPnl: number;
+  maxDailyLoss: number;
+  remainingDailyLoss: number;
+  simulationOnly: true;
+  brokerSubmitted: false;
+};
+
 type PaperPortfolio = {
   startingCash: number;
   cash: number;
@@ -224,6 +236,7 @@ type PaperPortfolio = {
   pendingOrderCount: number;
   noEntryCount: number;
   overdrawn: boolean;
+  risk?: PaperPortfolioRisk | null;
   openPositions: PaperPortfolioOpenPosition[];
   closedPositions: PaperPortfolioClosedPosition[];
   simulationOnly: true;
@@ -2934,6 +2947,94 @@ export default function Home() {
                   </strong>
                 </div>
               </div>
+
+              {session.paperPortfolio.risk ? (
+                <div className="fibonacci-latest">
+                  <strong>
+                    Paper risk controls ·{" "}
+                    {session.paperPortfolio.risk.tradingAllowed
+                      ? "TRADING ALLOWED"
+                      : "TRADING HALTED"}
+                  </strong>
+
+                  <div>
+                    <span>Risk reason</span>
+                    <span>
+                      {session.paperPortfolio.risk.reason}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Available for new orders</span>
+                    <span>
+                      {money(
+                        session.paperPortfolio.risk
+                          .availableForNewOrders,
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Pending cash reserved</span>
+                    <span>
+                      {money(
+                        session.paperPortfolio.risk
+                          .pendingReservedCash,
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Daily realized P&amp;L</span>
+                    <span
+                      className={
+                        session.paperPortfolio.risk
+                          .dailyRealizedPnl > 0
+                          ? "positive"
+                          : session.paperPortfolio.risk
+                                .dailyRealizedPnl < 0
+                            ? "negative"
+                            : undefined
+                      }
+                    >
+                      {session.paperPortfolio.risk
+                        .dailyRealizedPnl >= 0
+                        ? "+"
+                        : ""}
+                      {money(
+                        session.paperPortfolio.risk
+                          .dailyRealizedPnl,
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Daily loss limit</span>
+                    <span>
+                      {money(
+                        session.paperPortfolio.risk.maxDailyLoss,
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Remaining loss allowance</span>
+                    <span>
+                      {money(
+                        session.paperPortfolio.risk
+                          .remainingDailyLoss,
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>Execution boundary</span>
+                    <span>
+                      SIMULATION ONLY · NOT BROKER SUBMITTED
+                    </span>
+                  </div>
+                </div>
+              ) : null}
 
               {session.paperPortfolio.openPositions.length > 0 ? (
                 <div className="fibonacci-latest">
